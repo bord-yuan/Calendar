@@ -16,6 +16,15 @@ body {
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+.app-shell {
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  background: #f4f1ea;
+  box-shadow: 0 0 45px rgb(15 23 42 / 10%);
+}
+
 button,
 input,
 select,

@@ -8,6 +8,7 @@ import {
   statusLabels,
 } from "@/lib/calendar";
 import type { EventRecord, EventStatus } from "@/types/calendar";
+import type { CalendarViewMode } from "@/components/bottom-navigation";
 
 const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
@@ -22,32 +23,41 @@ type WeekViewProps = {
   events: EventRecord[];
   now: Date;
   on_select: (event_id: string) => void;
+  view_mode: CalendarViewMode;
 };
 
-export function WeekView({ week_start, events, now, on_select }: WeekViewProps) {
+export function WeekView({
+  week_start,
+  events,
+  now,
+  on_select,
+  view_mode,
+}: WeekViewProps) {
   const today = dateKey(new Date());
+  const visible_days = weekdays
+    .map((weekday, index) => ({ day: addDays(week_start, index), weekday }))
+    .filter(({ day }) => view_mode === "week" || dateKey(day) === today);
 
   return (
-    <div className="grid gap-3 lg:grid-cols-7">
-      {weekdays.map((weekday, index) => {
-        const day = addDays(week_start, index);
+    <div className="grid gap-4">
+      {visible_days.map(({ day, weekday }) => {
         const day_events = events.filter((event) => event.ddl_date === dateKey(day));
         const is_today = dateKey(day) === today;
 
         return (
           <section
-            className={`min-h-44 rounded-[1.4rem] border p-3 lg:min-h-[30rem] ${
+            className={`min-h-44 rounded-[1.4rem] border p-4 ${
               is_today
                 ? "border-teal-300 bg-teal-50/60 shadow-[0_12px_35px_rgba(13,148,136,0.08)]"
                 : "border-slate-200 bg-white/80"
             }`}
             key={weekday}
           >
-            <header className="mb-3 flex items-center justify-between lg:block">
+            <header className="mb-4 flex items-center justify-between">
               <p className={`text-xs font-bold ${is_today ? "text-teal-700" : "text-slate-400"}`}>
                 {weekday}
               </p>
-              <p className="mt-1 text-xl font-bold">
+              <p className="text-xl font-bold">
                 {day.getMonth() + 1}/{day.getDate()}
               </p>
             </header>
@@ -89,7 +99,7 @@ export function WeekView({ week_start, events, now, on_select }: WeekViewProps) 
               })}
 
               {day_events.length === 0 && (
-                <div className="flex h-20 items-center justify-center rounded-2xl border border-dashed border-slate-200 text-xs text-slate-300 lg:h-28">
+                <div className="flex h-24 items-center justify-center rounded-2xl border border-dashed border-slate-200 text-sm text-slate-300">
                   暂无 event
                 </div>
               )}

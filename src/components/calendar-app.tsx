@@ -1,8 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
+import {
+  BottomNavigation,
+  type CalendarViewMode,
+} from "@/components/bottom-navigation";
 import { EventForm } from "@/components/event-form";
 import { useLogin } from "@/components/login-provider";
 import { WeekView } from "@/components/week-view";
@@ -33,10 +36,23 @@ export function CalendarApp({ mode }: CalendarAppProps) {
   const [show_form, set_show_form] = useState(false);
   const [selected_event, set_selected_event] = useState<EventRecord | null>(null);
   const [now, set_now] = useState(() => new Date());
+  const [view_mode, set_view_mode] = useState<CalendarViewMode>("today");
 
   useEffect(() => {
     const timer = window.setInterval(() => set_now(new Date()), 60_000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    function apply_hash() {
+      if (window.location.hash === "#week") set_view_mode("week");
+      if (window.location.hash === "#today") set_view_mode("today");
+      if (window.location.hash === "#add-event") set_show_form(true);
+    }
+
+    apply_hash();
+    window.addEventListener("hashchange", apply_hash);
+    return () => window.removeEventListener("hashchange", apply_hash);
   }, []);
 
   const load_events = useCallback(async () => {
@@ -82,6 +98,11 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     void load_events();
   }
 
+  function change_view_mode(next_view_mode: CalendarViewMode) {
+    set_view_mode(next_view_mode);
+    window.history.replaceState(null, "", `#${next_view_mode}`);
+  }
+
   const reminders = events.filter(
     (event) => getEventStatus(event, now) === "soon",
   );
@@ -89,10 +110,10 @@ export function CalendarApp({ mode }: CalendarAppProps) {
   if (!login_session) return <AuthForm on_login={login_user} />;
 
   return (
-    <main className="min-h-screen bg-[#f4f1ea] text-slate-950">
+    <main className="app-shell text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f4f1ea]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link className="flex items-center gap-3" href="/">
+        <div className="flex items-center justify-between gap-4 px-5 py-4">
+          <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-slate-950 font-bold text-white">
               C
             </span>
@@ -100,29 +121,14 @@ export function CalendarApp({ mode }: CalendarAppProps) {
               <span className="block text-xs font-bold uppercase tracking-[0.22em] text-teal-700">
                 Calendar
               </span>
-              <span className="hidden text-xs text-slate-400 sm:block">
+              <span className="block text-xs text-slate-400">
                 user_id: {login_session.user_id}
               </span>
             </span>
-          </Link>
-
-          <nav className="flex items-center gap-1 rounded-2xl bg-white p-1 shadow-sm">
-            <Link
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${mode === "week" ? "bg-slate-950 text-white" : "text-slate-500"}`}
-              href="/"
-            >
-              本周
-            </Link>
-            <Link
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${mode === "all" ? "bg-slate-950 text-white" : "text-slate-500"}`}
-              href="/events"
-            >
-              全部
-            </Link>
-          </nav>
+          </div>
 
           <button
-            className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-white"
+            className="min-h-12 rounded-2xl px-4 text-sm font-semibold text-slate-500 hover:bg-white"
             onClick={logout_user}
             type="button"
           >
@@ -131,14 +137,14 @@ export function CalendarApp({ mode }: CalendarAppProps) {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1500px] px-4 py-7 sm:px-6 lg:px-8">
-        <section className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="px-5 pb-32 pt-7">
+        <section className="mb-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-700">
-              {mode === "week" ? "Weekly events" : "All events"}
+              {mode === "week" ? (view_mode === "today" ? "Today" : "This week") : "All events"}
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              {mode === "week" ? "本周 event" : "全部 event"}
+              {mode === "week" ? (view_mode === "today" ? "当日事项" : "本周事项") : "全部 event"}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
               {mode === "week"
@@ -146,43 +152,37 @@ export function CalendarApp({ mode }: CalendarAppProps) {
                 : "按 ddl_date 和 ddl_time 排列"}
             </p>
           </div>
-          <button
-            className="rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white shadow-lg"
-            onClick={() => set_show_form(true)}
-            type="button"
-          >
-            ＋ 添加 event
-          </button>
         </section>
 
         {mode === "week" && (
           <>
-            <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.4rem] border border-white bg-white/70 p-3 shadow-sm">
-              <div className="flex gap-2">
+            {view_mode === "week" && (
+            <section className="mb-5 rounded-[1.4rem] border border-white bg-white/70 p-3 shadow-sm">
+              <div className="grid grid-cols-3 gap-2">
                 <button
-                  className="nav-button"
+                  className="nav-button min-h-12"
                   onClick={() => set_week_start(addDays(week_start, -7))}
                   type="button"
                 >
                   ← 上一周
                 </button>
                 <button
-                  className="nav-button"
+                  className="nav-button min-h-12"
                   onClick={() => set_week_start(startOfWeek(new Date()))}
                   type="button"
                 >
                   回到本周
                 </button>
                 <button
-                  className="nav-button"
+                  className="nav-button min-h-12"
                   onClick={() => set_week_start(addDays(week_start, 7))}
                   type="button"
                 >
                   下一周 →
                 </button>
               </div>
-              <p className="text-sm font-semibold text-slate-500">仅加载当前周</p>
             </section>
+            )}
 
             {reminders.length > 0 && (
               <section className="mb-5 rounded-[1.4rem] bg-amber-100 px-5 py-4 text-amber-950">
@@ -212,12 +212,22 @@ export function CalendarApp({ mode }: CalendarAppProps) {
             events={events}
             now={now}
             on_select={open_event}
+            view_mode={view_mode}
             week_start={week_start}
           />
         ) : (
           <AllEvents events={events} now={now} on_select={open_event} />
         )}
       </div>
+
+      {mode === "week" && (
+        <BottomNavigation
+          active_item="calendar"
+          on_add={() => set_show_form(true)}
+          on_view_change={change_view_mode}
+          view_mode={view_mode}
+        />
+      )}
 
       {show_form && (
         <EventForm
