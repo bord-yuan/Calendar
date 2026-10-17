@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthForm } from "@/components/auth-form";
 import {
   BottomNavigation,
@@ -13,73 +13,128 @@ import {
   addDays,
   dateKey,
   eventDate,
-  formatDate,
   formatFullDate,
   formatTime,
   getEventStatus,
   startOfWeek,
 } from "@/lib/calendar";
 import { createClient } from "@/lib/supabase/client";
+import { read_cache, write_cache } from "@/lib/cache";
 import type { EventRecord } from "@/types/calendar";
 
 type CalendarAppProps = {
   mode: "week" | "all";
 };
 
+type EventLoadMode = CalendarViewMode | "all";
+
 export function CalendarApp({ mode }: CalendarAppProps) {
   const supabase = useMemo(() => createClient(), []);
-  const { login_session, login_user, logout_user } = useLogin();
+  const { login_session, login_ready, login_user } = useLogin();
   const [week_start, set_week_start] = useState(() => startOfWeek(new Date()));
   const [events, set_events] = useState<EventRecord[]>([]);
-  const [loading, set_loading] = useState(true);
+  const [loading, set_loading] = useState(false);
   const [error, set_error] = useState("");
   const [show_form, set_show_form] = useState(false);
   const [selected_event, set_selected_event] = useState<EventRecord | null>(null);
   const [now, set_now] = useState(() => new Date());
-  const [view_mode, set_view_mode] = useState<CalendarViewMode>("today");
+  const [view_mode, set_view_mode] = useState<CalendarViewMode | null>(null);
+  const active_cache_key = useRef<string | null>(null);
+  const visible_cache_key = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => set_now(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
+  const load_events = useCallback(async (
+    load_mode: EventLoadMode,
+    load_week_start: Date,
+  ) => {
+    if (!login_session) return;
+
+    const from_date =
+      load_mode === "all"
+        ? null
+        : load_mode === "today"
+          ? dateKey(new Date())
+          : dateKey(load_week_start);
+    const to_date =
+      load_mode === "all"
+        ? null
+        : load_mode === "today"
+          ? from_date
+          : dateKey(addDays(load_week_start, 6));
+    const cache_key =
+      load_mode === "all"
+        ? null
+        : `calendar_events:${login_session.user_id}:${load_mode}:${from_date}:${to_date}`;
+    const request_key =
+      cache_key ?? `calendar_events:${login_session.user_id}:all`;
+    const cached_events = cache_key
+      ? read_cache<EventRecord[]>(cache_key)
+      : null;
+
+    active_cache_key.current = request_key;
+    visible_cache_key.current = cache_key;
+    set_events(cached_events ?? []);
+    set_loading(cached_events === null);
+    set_error("");
+
+    const { data, error: query_error } = await supabase.rpc("get_events", {
+      user_id: login_session.user_id,
+      password: login_session.password,
+      from_date,
+      to_date,
+    });
+
+    if (active_cache_key.current !== request_key) return;
+
+    if (query_error) {
+      set_error(`读取 event 失败：${query_error.message}`);
+      if (!cached_events) set_events([]);
+    } else {
+      const loaded_events = (data ?? []) as EventRecord[];
+      set_events(loaded_events);
+      if (cache_key) write_cache(cache_key, loaded_events);
+    }
+    set_loading(false);
+  }, [login_session, supabase]);
+
   useEffect(() => {
+    if (!login_session || mode !== "week") return;
+
     function apply_hash() {
-      if (window.location.hash === "#week") set_view_mode("week");
-      if (window.location.hash === "#today") set_view_mode("today");
+      const current_week_start = startOfWeek(new Date());
+
+      if (window.location.hash === "#week") {
+        set_week_start(current_week_start);
+        set_view_mode("week");
+        void load_events("week", current_week_start);
+      }
+
+      if (window.location.hash === "#today") {
+        set_week_start(current_week_start);
+        set_view_mode("today");
+        void load_events("today", current_week_start);
+      }
+
       if (window.location.hash === "#add-event") set_show_form(true);
     }
 
     apply_hash();
     window.addEventListener("hashchange", apply_hash);
     return () => window.removeEventListener("hashchange", apply_hash);
-  }, []);
-
-  const load_events = useCallback(async () => {
-    if (!login_session) return;
-    set_loading(true);
-    set_error("");
-
-    const { data, error: query_error } = await supabase.rpc("get_events", {
-      user_id: login_session.user_id,
-      password: login_session.password,
-      from_date: mode === "week" ? dateKey(week_start) : null,
-      to_date: mode === "week" ? dateKey(addDays(week_start, 6)) : null,
-    });
-
-    if (query_error) {
-      set_error(query_error.message);
-      set_events([]);
-    } else {
-      set_events((data ?? []) as EventRecord[]);
-    }
-    set_loading(false);
-  }, [login_session, mode, supabase, week_start]);
+  }, [load_events, login_session, mode]);
 
   useEffect(() => {
-    const request = window.setTimeout(() => void load_events(), 0);
+    if (!login_session || mode !== "all") return;
+    const request = window.setTimeout(
+      () => void load_events("all", week_start),
+      0,
+    );
     return () => window.clearTimeout(request);
-  }, [load_events]);
+  }, [load_events, login_session, mode, week_start]);
 
   function open_event(event_id: string) {
     set_selected_event(
@@ -95,62 +150,112 @@ export function CalendarApp({ mode }: CalendarAppProps) {
 
   function event_saved() {
     close_form();
-    void load_events();
+    if (mode === "all") {
+      void load_events("all", week_start);
+    } else if (view_mode) {
+      void load_events(view_mode, week_start);
+    }
   }
 
   function change_view_mode(next_view_mode: CalendarViewMode) {
+    const next_week_start =
+      next_view_mode === "today" ? startOfWeek(new Date()) : week_start;
+
+    set_week_start(next_week_start);
     set_view_mode(next_view_mode);
     window.history.replaceState(null, "", `#${next_view_mode}`);
+    void load_events(next_view_mode, next_week_start);
+  }
+
+  function change_week(days: number) {
+    const next_week_start = addDays(week_start, days);
+    set_week_start(next_week_start);
+    void load_events("week", next_week_start);
+  }
+
+  async function update_event_status(event_id: string) {
+    if (!login_session) return;
+
+    const event = events.find((item) => item.event_id === event_id);
+    if (!event) return;
+
+    const event_status: EventRecord["event_status"] =
+      event.event_status === "completed" ? "unfinished" : "completed";
+    set_events((current_events) => {
+      const next_events = current_events.map((item) =>
+        item.event_id === event_id ? { ...item, event_status } : item,
+      );
+      if (visible_cache_key.current) {
+        write_cache(visible_cache_key.current, next_events);
+      }
+      return next_events;
+    });
+    set_error("");
+
+    const { data: updated, error: update_error } = await supabase.rpc(
+      "update_event_status",
+      {
+        user_id: login_session.user_id,
+        password: login_session.password,
+        event_id,
+        event_status,
+      },
+    );
+
+    if (update_error || !updated) {
+      set_events((current_events) => {
+        const next_events = current_events.map((item) =>
+          item.event_id === event_id
+            ? { ...item, event_status: event.event_status }
+            : item,
+        );
+        if (visible_cache_key.current) {
+          write_cache(visible_cache_key.current, next_events);
+        }
+        return next_events;
+      });
+      set_error(
+        `更新 event_status 失败：${update_error?.message ?? "Event not found"}`,
+      );
+    }
   }
 
   const reminders = events.filter(
     (event) => getEventStatus(event, now) === "soon",
   );
 
+  if (!login_ready) return null;
+
   if (!login_session) return <AuthForm on_login={login_user} />;
 
   return (
     <main className="app-shell text-slate-950">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f4f1ea]/90 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-4 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-2xl bg-slate-950 font-bold text-white">
-              C
-            </span>
-            <span>
-              <span className="block text-xs font-bold uppercase tracking-[0.22em] text-teal-700">
-                Calendar
-              </span>
-              <span className="block text-xs text-slate-400">
-                user_id: {login_session.user_id}
-              </span>
-            </span>
-          </div>
-
-          <button
-            className="min-h-12 rounded-2xl px-4 text-sm font-semibold text-slate-500 hover:bg-white"
-            onClick={logout_user}
-            type="button"
-          >
-            退出
-          </button>
-        </div>
-      </header>
-
       <div className="px-5 pb-32 pt-7">
         <section className="mb-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-700">
-              {mode === "week" ? (view_mode === "today" ? "Today" : "This week") : "All events"}
+              {mode === "week"
+                ? view_mode === "today"
+                  ? "Today"
+                  : view_mode === "week"
+                    ? "This week"
+                    : "Calendar"
+                : "All events"}
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              {mode === "week" ? (view_mode === "today" ? "当日事项" : "本周事项") : "全部 event"}
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
               {mode === "week"
-                ? `${formatFullDate(week_start)} — ${formatDate(addDays(week_start, 6))}`
-                : "按 ddl_date 和 ddl_time 排列"}
-            </p>
+                ? view_mode === "today"
+                  ? "今日事项"
+                  : view_mode === "week"
+                    ? "本周事项"
+                    : "选择日程视图"
+                : "全部 event"}
+            </h1>
+            {mode === "all" && (
+              <p className="mt-2 text-sm text-slate-500">
+                按 ddl_date 和 ddl_time 排列
+              </p>
+            )}
           </div>
         </section>
 
@@ -161,21 +266,25 @@ export function CalendarApp({ mode }: CalendarAppProps) {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   className="nav-button min-h-12"
-                  onClick={() => set_week_start(addDays(week_start, -7))}
+                  onClick={() => change_week(-7)}
                   type="button"
                 >
                   ← 上一周
                 </button>
                 <button
                   className="nav-button min-h-12"
-                  onClick={() => set_week_start(startOfWeek(new Date()))}
+                  onClick={() => {
+                    const current_week_start = startOfWeek(new Date());
+                    set_week_start(current_week_start);
+                    void load_events("week", current_week_start);
+                  }}
                   type="button"
                 >
                   回到本周
                 </button>
                 <button
                   className="nav-button min-h-12"
-                  onClick={() => set_week_start(addDays(week_start, 7))}
+                  onClick={() => change_week(7)}
                   type="button"
                 >
                   下一周 →
@@ -199,19 +308,24 @@ export function CalendarApp({ mode }: CalendarAppProps) {
 
         {error && (
           <p className="mb-5 rounded-2xl bg-red-50 px-5 py-4 text-sm text-red-700">
-            读取 event 失败：{error}
+            {error}
           </p>
         )}
 
-        {loading ? (
+        {mode === "week" && view_mode === null ? (
+          <div className="flex h-64 items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white/60 px-8 text-center text-sm leading-6 text-slate-400">
+            点击下方“今日”或“本周”后加载对应日程
+          </div>
+        ) : loading ? (
           <div className="flex h-64 items-center justify-center rounded-[2rem] bg-white/60 text-slate-400">
             正在读取 event…
           </div>
-        ) : mode === "week" ? (
+        ) : mode === "week" && view_mode ? (
           <WeekView
             events={events}
             now={now}
             on_select={open_event}
+            on_status_change={(event_id) => void update_event_status(event_id)}
             view_mode={view_mode}
             week_start={week_start}
           />
@@ -284,7 +398,7 @@ function EventGroup({
       <div className="space-y-3">
         {events.map((event) => (
           <button
-            className="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left transition hover:shadow-md"
+            className="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left transition active:scale-[0.98] active:bg-slate-50"
             key={event.event_id}
             onClick={() => on_select(event.event_id)}
             type="button"

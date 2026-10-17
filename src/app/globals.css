@@ -36,6 +36,15 @@ button {
   cursor: pointer;
 }
 
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .field {
   margin-top: 0.5rem;
   width: 100%;

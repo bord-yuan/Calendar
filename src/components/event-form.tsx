@@ -78,22 +78,22 @@ export function EventForm({
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-[15px] backdrop-blur-sm"
       role="dialog"
     >
-      <section className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] bg-white p-6 shadow-2xl sm:rounded-[2rem] sm:p-8">
+      <section className="hide-scrollbar max-h-[76dvh] w-full max-w-[340px] overflow-y-auto rounded-3xl bg-[#f3f7ef] p-4 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">
               {event ? "Edit event" : "New event"}
             </p>
-            <h2 className="mt-2 text-2xl font-bold">
+            <h2 className="mt-1 text-xl font-bold">
               {event ? "编辑 event" : "添加 event"}
             </h2>
           </div>
           <button
             aria-label="关闭"
-            className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500"
+            className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition active:scale-90 active:bg-slate-200"
             onClick={on_close}
             type="button"
           >
@@ -101,22 +101,22 @@ export function EventForm({
           </button>
         </div>
 
-        <form className="mt-7 space-y-5" onSubmit={handle_submit}>
+        <form className="mt-4 space-y-3" onSubmit={handle_submit}>
           <label className="block text-sm font-semibold text-slate-700">
             event_name
             <input
-              className="field"
+              className="field !mt-1 !rounded-xl !px-3 !py-2"
               onChange={(form_event) => set_event_name(form_event.target.value)}
               required
               value={event_name}
             />
           </label>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3">
             <label className="block text-sm font-semibold text-slate-700">
               type
               <select
-                className="field"
+                className="field !mt-1 !rounded-xl !px-3 !py-2"
                 onChange={(form_event) => set_type(form_event.target.value)}
                 value={type}
               >
@@ -128,7 +128,7 @@ export function EventForm({
             <label className="block text-sm font-semibold text-slate-700">
               ddl_date
               <input
-                className="field"
+                className="field !mt-1 !rounded-xl !px-3 !py-2"
                 onChange={(form_event) => set_ddl_date(form_event.target.value)}
                 required
                 type="date"
@@ -138,7 +138,7 @@ export function EventForm({
             <label className="block text-sm font-semibold text-slate-700">
               ddl_time
               <input
-                className="field"
+                className="field !mt-1 !rounded-xl !px-3 !py-2"
                 onChange={(form_event) => set_ddl_time(form_event.target.value)}
                 required
                 type="time"
@@ -149,11 +149,11 @@ export function EventForm({
 
           <fieldset>
             <legend className="text-sm font-semibold text-slate-700">colour</legend>
-            <div className="mt-2 flex h-12 items-center gap-3 rounded-2xl border border-slate-200 px-3">
+            <div className="mt-1 flex min-h-12 items-center justify-between gap-2 rounded-xl border border-slate-200 px-3">
               {colours.map((colour_option) => (
                 <button
                   aria-label={`选择 colour ${colour_option}`}
-                  className={`size-7 rounded-full transition ${colour === colour_option ? "scale-110 ring-2 ring-slate-900 ring-offset-2" : ""}`}
+                  className={`size-7 rounded-full transition active:scale-90 ${colour === colour_option ? "scale-110 ring-2 ring-slate-900 ring-offset-2" : ""}`}
                   key={colour_option}
                   onClick={() => set_colour(colour_option)}
                   style={{ backgroundColor: colour_option }}
@@ -166,7 +166,7 @@ export function EventForm({
           <label className="block text-sm font-semibold text-slate-700">
             description
             <textarea
-              className="field min-h-28 resize-y"
+              className="field !mt-1 min-h-20 resize-y !rounded-xl !px-3 !py-2"
               onChange={(form_event) => set_description(form_event.target.value)}
               value={description}
             />
@@ -176,10 +176,10 @@ export function EventForm({
             <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
           )}
 
-          <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-between">
+          <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-3">
             {event ? (
               <button
-                className="rounded-2xl px-4 py-3 font-semibold text-red-600 hover:bg-red-50"
+                className="min-h-11 rounded-xl px-4 font-semibold text-red-600 transition active:scale-[0.98] active:bg-red-50"
                 disabled={saving}
                 onClick={() => void delete_event()}
                 type="button"
@@ -189,16 +189,16 @@ export function EventForm({
             ) : (
               <span />
             )}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
-                className="rounded-2xl border border-slate-200 px-5 py-3 font-semibold"
+                className="min-h-11 rounded-xl border border-slate-200 px-4 font-semibold transition active:scale-[0.98] active:bg-slate-100"
                 onClick={on_close}
                 type="button"
               >
                 取消
               </button>
               <button
-                className="rounded-2xl bg-slate-950 px-5 py-3 font-semibold text-white"
+                className="min-h-11 rounded-xl bg-slate-950 px-4 font-semibold text-white transition active:scale-[0.98] active:bg-slate-800"
                 disabled={saving}
                 type="submit"
               >

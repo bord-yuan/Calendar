@@ -5,7 +5,9 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { useLogin } from "@/components/login-provider";
 
 export default function MyPage() {
-  const { login_session, login_user, logout_user } = useLogin();
+  const { login_session, login_ready, login_user, logout_user } = useLogin();
+
+  if (!login_ready) return null;
 
   if (!login_session) return <AuthForm on_login={login_user} />;
 

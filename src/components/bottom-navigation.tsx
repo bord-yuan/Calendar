@@ -6,14 +6,14 @@ export type CalendarViewMode = "today" | "week";
 
 type BottomNavigationProps = {
   active_item: "calendar" | "my";
-  view_mode?: CalendarViewMode;
+  view_mode?: CalendarViewMode | null;
   on_add?: () => void;
   on_view_change?: (view_mode: CalendarViewMode) => void;
 };
 
 export function BottomNavigation({
   active_item,
-  view_mode = "today",
+  view_mode = null,
   on_add,
   on_view_change,
 }: BottomNavigationProps) {
@@ -23,14 +23,14 @@ export function BottomNavigation({
         {active_item === "calendar" ? (
           <>
             <button
-              className={`h-14 flex-1 rounded-xl text-base font-bold transition ${view_mode === "today" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"}`}
+              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "today" ? "bg-emerald-100 shadow-sm" : ""}`}
               onClick={() => on_view_change?.("today")}
               type="button"
             >
-              当日
+              今日
             </button>
             <button
-              className={`h-14 flex-1 rounded-xl text-base font-bold transition ${view_mode === "week" ? "bg-slate-950 text-white shadow-sm" : "text-slate-500"}`}
+              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "week" ? "bg-emerald-100 shadow-sm" : ""}`}
               onClick={() => on_view_change?.("week")}
               type="button"
             >
@@ -40,13 +40,13 @@ export function BottomNavigation({
         ) : (
           <>
             <Link
-              className="flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold text-slate-500"
+              className="flex h-14 flex-1 items-center justify-center rounded-xl text-lg font-black text-black"
               href="/#today"
             >
-              当日
+              今日
             </Link>
             <Link
-              className="flex h-14 flex-1 items-center justify-center rounded-xl text-base font-bold text-slate-500"
+              className="flex h-14 flex-1 items-center justify-center rounded-xl text-lg font-black text-black"
               href="/#week"
             >
               本周
@@ -58,29 +58,46 @@ export function BottomNavigation({
       {on_add ? (
         <button
           aria-label="添加新日程"
-          className="mx-3 flex size-17 shrink-0 items-center justify-center rounded-full bg-teal-600 text-4xl font-light leading-none text-white shadow-[0_10px_25px_rgba(13,148,136,0.35)] transition active:scale-95"
+          className="mx-3 flex size-16 shrink-0 items-center justify-center rounded-full bg-black text-white shadow-[0_10px_25px_rgba(15,23,42,0.3)] transition active:scale-95"
           onClick={on_add}
           type="button"
         >
-          +
+          <AddIcon />
         </button>
       ) : (
         <Link
           aria-label="添加新日程"
-          className="mx-3 flex size-17 shrink-0 items-center justify-center rounded-full bg-teal-600 text-4xl font-light leading-none text-white shadow-[0_10px_25px_rgba(13,148,136,0.35)]"
+          className="mx-3 flex size-16 shrink-0 items-center justify-center rounded-full bg-black text-white shadow-[0_10px_25px_rgba(15,23,42,0.3)]"
           href="/#add-event"
         >
-          +
+          <AddIcon />
         </Link>
       )}
 
       <Link
-        className={`flex h-17 w-20 shrink-0 flex-col items-center justify-center rounded-2xl text-sm font-bold transition ${active_item === "my" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-500"}`}
+        className={`flex h-17 w-20 shrink-0 items-center justify-center rounded-2xl text-lg font-black text-black transition ${active_item === "my" ? "bg-slate-200" : "bg-slate-100"}`}
         href="/my"
       >
-        <span className="text-xl">●</span>
-        <span className="mt-0.5">我的</span>
+        我的
       </Link>
     </nav>
+  );
+}
+
+function AddIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-9"
+      fill="none"
+      viewBox="0 0 36 36"
+    >
+      <path
+        d="M18 5V31M5 18H31"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="3"
+      />
+    </svg>
   );
 }

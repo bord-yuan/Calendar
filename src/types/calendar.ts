@@ -12,6 +12,7 @@ export type EventRecord = {
   ddl_time: string;
   colour: string;
   description: string;
+  event_status: "unfinished" | "completed";
 };
 
 export type EventStatus = "upcoming" | "soon" | "ended";
