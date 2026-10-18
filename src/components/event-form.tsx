@@ -157,7 +157,7 @@ export function EventForm({
 
         <form className="mt-4 space-y-3" onSubmit={handle_submit}>
           <label className="block text-sm font-semibold text-slate-700">
-            event_name
+            名称
             <input
               className="field !mt-1 !rounded-xl !px-3 !py-2"
               onChange={(form_event) => set_event_name(form_event.target.value)}
@@ -286,11 +286,11 @@ export function EventForm({
           </div>
 
           <fieldset>
-            <legend className="text-sm font-semibold text-slate-700">colour</legend>
+            <legend className="text-sm font-semibold text-slate-700">展示颜色</legend>
             <div className="mt-1 flex min-h-12 items-center justify-between gap-2 rounded-xl border border-slate-200 px-3">
               {colours.map((colour_option) => (
                 <button
-                  aria-label={`选择 colour ${colour_option}`}
+                  aria-label={`选择展示颜色 ${colour_option}`}
                   className={`size-7 rounded-full transition active:scale-90 ${colour === colour_option ? "scale-110 ring-2 ring-slate-900 ring-offset-2" : ""}`}
                   key={colour_option}
                   onClick={() => set_colour(colour_option)}
@@ -317,7 +317,7 @@ export function EventForm({
                 <div className="grid grid-cols-8 gap-2">
                   {more_colours.map((colour_option) => (
                     <button
-                      aria-label={`选择 colour ${colour_option}`}
+                      aria-label={`选择展示颜色 ${colour_option}`}
                       className={`aspect-square w-full rounded-md transition active:scale-90 ${colour === colour_option ? "ring-2 ring-slate-900 ring-offset-2" : ""}`}
                       key={colour_option}
                       onClick={() => set_colour(colour_option)}
@@ -345,7 +345,7 @@ export function EventForm({
           </fieldset>
 
           <label className="block text-sm font-semibold text-slate-700">
-            description
+            描述
             <textarea
               className="field !mt-1 min-h-20 resize-y !rounded-xl !px-3 !py-2"
               onChange={(form_event) => set_description(form_event.target.value)}
@@ -360,12 +360,12 @@ export function EventForm({
           <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-3">
             {event ? (
               <button
-                className="min-h-11 rounded-xl px-4 font-semibold text-red-600 transition active:scale-[0.98] active:bg-red-50"
+                className="min-h-11 rounded-xl px-4 font-semibold text-red-700 transition active:scale-[0.98] active:bg-red-50"
                 disabled={saving}
                 onClick={() => void delete_event()}
                 type="button"
               >
-                删除 event
+                删除事项
               </button>
             ) : (
               <span />

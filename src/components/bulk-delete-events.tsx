@@ -90,6 +90,7 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
           ? `已永久删除 ${deleted_count} 个事项`
           : `没有找到满足“${condition}”的事项`,
       );
+      set_show_modal(false);
     }
     set_deleting(false);
   }

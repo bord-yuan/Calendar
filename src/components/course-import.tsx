@@ -76,7 +76,7 @@ export function CourseImport({ user_id, password }: LoginSession) {
         onClick={() => set_show_modal(true)}
         type="button"
       >
-        导入个人课表
+        导入北邮课表
       </button>
 
       {show_modal && (
@@ -95,7 +95,7 @@ export function CourseImport({ user_id, password }: LoginSession) {
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
                   Import courses
                 </p>
-                <h2 className="mt-2 text-xl font-bold">导入个人课表</h2>
+                <h2 className="mt-2 text-xl font-bold">导入北邮课表</h2>
               </div>
               <button
                 aria-label="关闭导入课表"
@@ -108,7 +108,7 @@ export function CourseImport({ user_id, password }: LoginSession) {
               </button>
             </header>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              选择固定格式的 .xls 文件，并指定第 1 周周一。课程会按文件中的周次展开为具体日期。
+              北邮教务-&gt;课程与考试-&gt;学期理论课表-&gt;打印-&gt;导入.xls文件，第一周周一为2026.8.31
             </p>
 
             <label className="mt-5 block text-sm font-semibold text-slate-700">

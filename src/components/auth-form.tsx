@@ -17,7 +17,7 @@ export function AuthForm({ on_login }: AuthFormProps) {
 
   async function login_user(create_user: boolean) {
     if (password === "") {
-      set_message("password 不能为空。");
+      set_message("Password 不能为空。");
       return;
     }
 
@@ -43,13 +43,13 @@ export function AuthForm({ on_login }: AuthFormProps) {
     }
 
     if (data === "invalid_password") {
-      set_message("password 不正确。");
+      set_message("Password 不正确。");
       set_loading(false);
       return;
     }
 
     if (data === "password_empty") {
-      set_message("password 不能为空。");
+      set_message("Password 不能为空。");
       set_loading(false);
       return;
     }
@@ -84,27 +84,27 @@ export function AuthForm({ on_login }: AuthFormProps) {
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight">登录日历</h1>
+        <h1 className="text-3xl font-bold tracking-tight">登录日程表</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          已有 user_id 会直接登录；新的 user_id 会询问是否创建。
+          新用户直接输入即可注册
         </p>
 
         <form className="mt-8 space-y-5" onSubmit={handle_submit}>
           <label className="block text-sm font-semibold text-slate-700">
-            user_id
+            ID
             <input
               className="field"
               onChange={(event) => set_user_id(event.target.value)}
-              placeholder="输入任意 user_id"
+              placeholder="输入任意长度非空字符串"
               value={user_id}
             />
           </label>
           <label className="block text-sm font-semibold text-slate-700">
-            password
+            Password
             <input
               className="field"
               onChange={(event) => set_password(event.target.value)}
-              placeholder="password 不能为空"
+              placeholder="任意长非空即可，例：1"
               required
               type="password"
               value={password}
@@ -141,9 +141,9 @@ export function AuthForm({ on_login }: AuthFormProps) {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
               New user
             </p>
-            <h2 className="mt-2 text-2xl font-bold">新建 user_id？</h2>
+            <h2 className="mt-2 text-2xl font-bold">新建 ID？</h2>
             <p className="mt-3 break-all text-sm leading-6 text-slate-500">
-              login 表中没有 <strong className="text-slate-900">{user_id}</strong>，是否使用当前 password 创建？
+              login 表中没有 <strong className="text-slate-900">{user_id}</strong>，是否使用当前 Password 创建？
             </p>
             <div className="mt-7 flex gap-3">
               <button
