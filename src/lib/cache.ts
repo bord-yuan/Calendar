@@ -32,3 +32,19 @@ export function remove_cache(cache_key: string) {
     return;
   }
 }
+
+export function remove_cache_prefix(cache_key_prefix: string) {
+  try {
+    const matching_keys = Array.from(
+      { length: window.localStorage.length },
+      (_, index) => window.localStorage.key(index),
+    ).filter(
+      (cache_key): cache_key is string =>
+        cache_key !== null && cache_key.startsWith(cache_key_prefix),
+    );
+    matching_keys.forEach((cache_key) => window.localStorage.removeItem(cache_key));
+    window.dispatchEvent(new Event(cache_change_event));
+  } catch {
+    return;
+  }
+}
