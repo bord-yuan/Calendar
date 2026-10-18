@@ -131,9 +131,13 @@ export function AuthForm({ on_login }: AuthFormProps) {
         <div
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-5 backdrop-blur-sm"
+          onClick={() => !loading && set_confirm_new(false)}
           role="dialog"
         >
-          <section className="w-full max-w-sm rounded-[2rem] bg-white p-7 shadow-2xl">
+          <section
+            className="w-full max-w-sm rounded-[2rem] bg-white p-7 shadow-2xl"
+            onClick={(click_event) => click_event.stopPropagation()}
+          >
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
               New user
             </p>

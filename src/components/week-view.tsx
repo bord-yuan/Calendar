@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   addDays,
   dateKey,
@@ -98,8 +98,8 @@ export function WeekView({
               {day_items.map((event) => {
                 if (event === "completed-toggle") {
                   return (
-                    <div className="flex items-center gap-3" key={event}>
-                      <span className="size-12 shrink-0" />
+                    <div className="flex items-center gap-2" key={event}>
+                      <span className="size-8 shrink-0" />
                       <button
                         aria-expanded={show_completed}
                         className="flex min-h-12 flex-1 items-center justify-between rounded-2xl bg-slate-100 px-4 text-sm font-bold text-slate-600 transition active:scale-[0.98] active:bg-slate-200"
@@ -124,18 +124,18 @@ export function WeekView({
                 const is_completed = event.event_status === "completed";
                 return (
                   <div
-                    className="flex items-center gap-3"
+                    className="flex items-center gap-2"
                     key={`${event.event_id}:${event.occurrence_date}`}
                   >
                     <button
                       aria-label={is_completed ? "恢复为未完成" : "标记为完成"}
                       aria-pressed={is_completed}
-                      className="flex size-12 shrink-0 items-center justify-center rounded-xl transition active:scale-90"
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg transition active:scale-90"
                       onClick={() => on_status_change(event)}
                       type="button"
                     >
                       <span
-                        className={`flex size-8 items-center justify-center rounded-lg border-[1.5px] transition ${
+                        className={`flex size-5 items-center justify-center rounded-md border-[1.5px] transition ${
                           is_completed
                             ? "border-slate-500 bg-slate-500"
                             : "border-slate-400 bg-transparent"
@@ -144,7 +144,7 @@ export function WeekView({
                         {is_completed && (
                           <svg
                             aria-hidden="true"
-                            className="size-5 text-white"
+                            className="size-3.5 text-white"
                             fill="none"
                             viewBox="0 0 20 20"
                           >
@@ -161,7 +161,7 @@ export function WeekView({
                     </button>
 
                     <button
-                      className={`grid h-20 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_5rem_5.5rem] items-center gap-3 rounded-2xl border-l-4 p-3 text-left shadow-sm transition active:scale-[0.98] active:brightness-95 ${is_completed ? "opacity-60" : status === "ended" ? "opacity-55" : ""}`}
+                      className={`grid h-24 min-w-0 flex-1 grid-rows-[1fr_3fr] rounded-2xl border-l-4 px-3 py-2 text-left shadow-sm transition active:scale-[0.98] active:brightness-95 ${is_completed ? "opacity-60" : status === "ended" ? "opacity-55" : ""}`}
                       onClick={() => on_select(event)}
                       style={{
                         borderLeftColor: is_completed ? "#94a3b8" : event.colour,
@@ -171,29 +171,31 @@ export function WeekView({
                       }}
                       type="button"
                     >
-                      <span className="min-w-0">
+                      <p
+                        className={`min-w-0 truncate text-sm font-bold leading-6 ${is_completed ? "text-slate-400" : ""}`}
+                      >
+                        {event.event_name}
+                      </p>
+                      <span className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_5rem_5.5rem] items-center gap-3">
                         <p
-                          className={`truncate text-sm font-bold leading-5 ${is_completed ? "text-slate-400" : ""}`}
-                        >
-                          {event.event_name}
-                        </p>
-                        <p
-                          className={`mt-2 truncate text-xs font-medium ${is_completed ? "text-slate-400" : "text-slate-600"}`}
+                          className={`min-w-0 truncate text-xs font-medium ${is_completed ? "text-slate-400" : "text-slate-600"}`}
                         >
                           {formatEventTime(event)} · {event.type}
                         </p>
-                      </span>
-                      <span className="line-clamp-3 w-20 text-center text-xs leading-4 text-slate-400">
-                        {event.description}
-                      </span>
-                      <span className="flex w-[5.5rem] shrink-0 flex-col items-end gap-1">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${is_completed ? "bg-slate-200 text-slate-500" : status_styles[status]}`}
-                        >
-                          {is_completed ? "已完成" : statusLabels[status]}
+                        <span className="line-clamp-3 w-20 text-center text-xs leading-4 text-slate-400">
+                          {event.type === "课程"
+                            ? course_location(event.description)
+                            : event.description}
                         </span>
-                        <span className="whitespace-nowrap text-xs font-semibold text-slate-400">
-                          {is_completed ? "完成" : formatEventCountdown(event, now)}
+                        <span className="flex w-[5.5rem] shrink-0 flex-col items-end gap-1">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${is_completed ? "bg-slate-200 text-slate-500" : status_styles[status]}`}
+                          >
+                            {is_completed ? "已完成" : statusLabels[status]}
+                          </span>
+                          <span className="whitespace-nowrap text-xs font-semibold text-slate-400">
+                            {is_completed ? "完成" : formatEventCountdown(event, now)}
+                          </span>
                         </span>
                       </span>
                     </button>
@@ -221,17 +223,33 @@ function WeekTimeline({
   on_select,
 }: Omit<WeekViewProps, "view_mode" | "on_status_change">) {
   const [selected_events, set_selected_events] = useState<EventRecord[]>([]);
+  const timeline_scroll = useRef<HTMLDivElement>(null);
   const today = dateKey(new Date());
   const days = weekdays.map((weekday, index) => ({
     day: addDays(week_start, index),
     weekday,
   }));
 
+  useEffect(() => {
+    const animation_frame = window.requestAnimationFrame(() => {
+      if (!timeline_scroll.current) return;
+      timeline_scroll.current.scrollLeft = 0;
+    });
+    return () => window.cancelAnimationFrame(animation_frame);
+  }, [week_start]);
+
   return (
     <>
       <section className="overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-sm">
+      <div
+        className="hide-scrollbar overflow-x-auto"
+        ref={timeline_scroll}
+      >
+      <div style={{ width: "calc(140% - 25.6px)" }}>
       <header className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-white">
-        <div />
+        <div className="sticky left-0 z-20 flex items-center justify-center bg-slate-50 text-sm font-bold text-slate-500">
+          {week_start.getMonth() + 1}月
+        </div>
         {days.map(({ day, weekday }) => {
           const is_today = dateKey(day) === today;
           return (
@@ -248,7 +266,7 @@ function WeekTimeline({
 
       <div className="flex">
         <div
-          className="relative w-16 shrink-0 bg-slate-50"
+          className="sticky left-0 z-20 w-16 shrink-0 bg-slate-50"
           style={{ height: timeline_height }}
         >
           {course_periods.map((period) => (
@@ -261,14 +279,15 @@ function WeekTimeline({
               }}
             >
               <span className="text-[9px] font-bold">{period.period}</span>
-              <span className="mt-0.5 whitespace-nowrap text-[8px] font-semibold tabular-nums">
-                {minutes_time(period.start)}–{minutes_time(period.end)}
+              <span className="mt-0.5 text-center text-[8px] font-semibold leading-[10px] tabular-nums">
+                <span className="block">{minutes_time(period.start)}</span>
+                <span className="block">-{minutes_time(period.end)}</span>
               </span>
             </span>
           ))}
           {after_course_hours.map((hour) => (
             <span
-              className={`absolute right-1 text-[10px] font-semibold tabular-nums text-slate-400 ${
+              className={`absolute inset-x-0 text-center text-[10px] font-semibold tabular-nums text-slate-400 ${
                 hour === 24 ? "-translate-y-full -mt-1" : "-translate-y-1/2"
               }`}
               key={hour}
@@ -355,7 +374,16 @@ function WeekTimeline({
                         <span className="block truncate text-[10px] font-bold leading-3 text-slate-800">
                           {event_group.length > 1 ? "多个事项" : event.event_name}
                         </span>
-                        <span className="mt-1 block text-[9px] font-semibold tabular-nums text-slate-500">
+                        {event_group.length === 1 &&
+                          event.type === "课程" &&
+                          course_location(event.description) && (
+                            <span className="mt-0.5 block truncate text-[8px] leading-3 text-slate-500">
+                              {course_location(event.description)}
+                            </span>
+                          )}
+                        <span
+                          className={`${event.type === "课程" ? "mt-0.5" : "mt-1"} block text-[9px] font-semibold leading-3 tabular-nums text-slate-500`}
+                        >
                           {event_group.length > 1
                             ? `${event_group.length} 项`
                             : event.type !== "任务"
@@ -370,6 +398,8 @@ function WeekTimeline({
             })}
           </div>
         </div>
+      </div>
+      </div>
       </div>
       </section>
 
@@ -425,7 +455,9 @@ function WeekTimeline({
                     </span>
                     {event.description && (
                       <span className="mt-1 block truncate text-xs text-slate-400">
-                        {event.description}
+                        {event.type === "课程"
+                          ? course_location(event.description)
+                          : event.description}
                       </span>
                     )}
                   </span>
@@ -443,6 +475,14 @@ function WeekTimeline({
 function event_minutes(ddl_time: string) {
   const [hour, minute] = ddl_time.split(":").map(Number);
   return hour * 60 + minute;
+}
+
+function course_location(description: string) {
+  const location =
+    description
+      .split(/\r?\n/)
+      .find((line) => /^\s*地点\s*[:：]/.test(line)) ?? description;
+  return location.replace(/^\s*地点\s*[:：]\s*/, "").trim();
 }
 
 function sort_by_ddl(first: EventRecord, second: EventRecord) {

@@ -18,19 +18,19 @@ export function BottomNavigation({
   on_view_change,
 }: BottomNavigationProps) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex w-full items-end border-t border-slate-200 bg-white/95 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-      <div className="flex min-w-0 flex-1 rounded-2xl bg-slate-100 p-1.5">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex w-full items-end border-t border-[#e7e1d6] bg-[#faf8f3]/95 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_35px_rgba(86,74,56,0.08)] backdrop-blur-xl">
+      <div className="flex min-w-0 flex-1 rounded-2xl bg-[#eeeae2] p-1.5">
         {active_item === "calendar" ? (
           <>
             <button
-              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "today" ? "bg-emerald-100 shadow-sm" : ""}`}
+              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "today" ? "bg-[#ddd6c9] shadow-sm" : ""}`}
               onClick={() => on_view_change?.("today")}
               type="button"
             >
               今日
             </button>
             <button
-              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "week" ? "bg-emerald-100 shadow-sm" : ""}`}
+              className={`h-14 flex-1 rounded-xl text-lg font-black text-black transition ${view_mode === "week" ? "bg-[#ddd6c9] shadow-sm" : ""}`}
               onClick={() => on_view_change?.("week")}
               type="button"
             >
@@ -75,7 +75,7 @@ export function BottomNavigation({
       )}
 
       <Link
-        className={`flex h-17 w-20 shrink-0 items-center justify-center rounded-2xl text-lg font-black text-black transition ${active_item === "my" ? "bg-slate-200" : "bg-slate-100"}`}
+        className={`flex h-17 w-20 shrink-0 items-center justify-center rounded-2xl text-lg font-black text-black transition ${active_item === "my" ? "bg-[#ddd6c9] shadow-sm" : "bg-[#eeeae2]"}`}
         href="/my"
       >
         我的

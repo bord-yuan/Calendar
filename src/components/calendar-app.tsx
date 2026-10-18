@@ -39,7 +39,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
   const [show_form, set_show_form] = useState(false);
   const [selected_event, set_selected_event] = useState<EventRecord | null>(null);
   const [now, set_now] = useState(() => new Date());
-  const [view_mode, set_view_mode] = useState<CalendarViewMode | null>(null);
+  const [view_mode, set_view_mode] = useState<CalendarViewMode>("today");
   const active_cache_key = useRef<string | null>(null);
   const visible_cache_key = useRef<string | null>(null);
 
@@ -112,9 +112,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
         set_week_start(current_week_start);
         set_view_mode("week");
         void load_events("week", current_week_start);
-      }
-
-      if (window.location.hash === "#today") {
+      } else {
         set_week_start(current_week_start);
         set_view_mode("today");
         void load_events("today", current_week_start);
@@ -151,7 +149,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     close_form();
     if (mode === "all") {
       void load_events("all", week_start);
-    } else if (view_mode) {
+    } else {
       void load_events(view_mode, week_start);
     }
   }
@@ -224,6 +222,8 @@ export function CalendarApp({ mode }: CalendarAppProps) {
   const reminders = events.filter(
     (event) => getEventStatus(event, now) === "soon",
   );
+  const is_current_week =
+    dateKey(week_start) === dateKey(startOfWeek(now));
 
   if (!login_ready) return null;
 
@@ -271,43 +271,44 @@ export function CalendarApp({ mode }: CalendarAppProps) {
                 </p>
               </div>
             )}
-          </div>
-        </section>
-
-        {mode === "week" && (
-          <>
-            {view_mode === "week" && (
-            <section className="mb-5 rounded-[1.4rem] border border-white bg-white/70 p-3 shadow-sm">
-              <div className="grid grid-cols-3 gap-2">
+            {mode === "week" && view_mode === "week" && (
+              <div className="flex shrink-0 items-center gap-1.5">
                 <button
-                  className="nav-button min-h-12"
+                  aria-label="上一周"
+                  className="flex h-10 items-center justify-center rounded-xl bg-white/70 px-2.5 text-xs font-bold text-slate-600 shadow-sm transition active:scale-95"
                   onClick={() => change_week(-7)}
                   type="button"
                 >
                   ← 上一周
                 </button>
+                {!is_current_week && (
+                  <button
+                    className="flex h-10 items-center justify-center rounded-xl bg-white/70 px-2.5 text-xs font-bold text-slate-600 shadow-sm transition active:scale-95"
+                    onClick={() => {
+                      const current_week_start = startOfWeek(now);
+                      set_week_start(current_week_start);
+                      void load_events("week", current_week_start);
+                    }}
+                    type="button"
+                  >
+                    返回
+                  </button>
+                )}
                 <button
-                  className="nav-button min-h-12"
-                  onClick={() => {
-                    const current_week_start = startOfWeek(new Date());
-                    set_week_start(current_week_start);
-                    void load_events("week", current_week_start);
-                  }}
-                  type="button"
-                >
-                  回到本周
-                </button>
-                <button
-                  className="nav-button min-h-12"
+                  aria-label="下一周"
+                  className="flex h-10 items-center justify-center rounded-xl bg-white/70 px-2.5 text-xs font-bold text-slate-600 shadow-sm transition active:scale-95"
                   onClick={() => change_week(7)}
                   type="button"
                 >
                   下一周 →
                 </button>
               </div>
-            </section>
             )}
+          </div>
+        </section>
 
+        {mode === "week" && (
+          <>
             {reminders.length > 0 && (
               <section className="mb-5 rounded-[1.4rem] bg-amber-100 px-5 py-4 text-amber-950">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
@@ -327,15 +328,11 @@ export function CalendarApp({ mode }: CalendarAppProps) {
           </p>
         )}
 
-        {mode === "week" && view_mode === null ? (
-          <div className="flex h-64 items-center justify-center rounded-[2rem] border border-dashed border-slate-200 bg-white/60 px-8 text-center text-sm leading-6 text-slate-400">
-            点击下方“今日”或“本周”后加载对应日程
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="flex h-64 items-center justify-center rounded-[2rem] bg-white/60 text-slate-400">
             正在读取 event…
           </div>
-        ) : mode === "week" && view_mode ? (
+        ) : mode === "week" ? (
           <WeekView
             events={events}
             now={now}

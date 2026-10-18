@@ -65,7 +65,7 @@ const field_options: FieldOption[] = [
 ];
 
 export function BulkDeleteEvents({ user_id, password }: LoginSession) {
-  const [expanded, set_expanded] = useState(false);
+  const [show_modal, set_show_modal] = useState(false);
   const [field_name, set_field_name] = useState<FieldName>("type");
   const [field_value, set_field_value] = useState("任务");
   const [deleting, set_deleting] = useState(false);
@@ -125,25 +125,48 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
   }
 
   return (
-    <section className="rounded-[1.6rem] border border-red-200 bg-white/80 p-6 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">
-        Danger zone
-      </p>
-      <h2 className="mt-2 text-xl font-bold">批量删除事项</h2>
-      <p className="mt-2 text-sm leading-6 text-red-600">
-        按一个数据库字段的等值条件批量删除，删除后不可撤回。
-      </p>
+    <>
+      <button
+        className="min-h-14 w-full rounded-2xl border border-red-200 bg-red-50 px-5 text-left font-bold text-red-700 shadow-sm transition active:scale-[0.98] active:bg-red-100"
+        onClick={() => set_show_modal(true)}
+        type="button"
+      >
+        批量删除事项
+      </button>
 
-      {!expanded ? (
-        <button
-          className="mt-5 min-h-12 w-full rounded-xl border border-red-200 bg-red-50 px-4 font-bold text-red-700 transition active:scale-[0.98] active:bg-red-100"
-          onClick={() => set_expanded(true)}
-          type="button"
+      {show_modal && (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-[15px] backdrop-blur-sm"
+          onClick={() => !deleting && set_show_modal(false)}
+          role="dialog"
         >
-          设置删除条件
-        </button>
-      ) : (
-        <div className="mt-5 space-y-4">
+          <section
+            className="hide-scrollbar max-h-[76dvh] w-full max-w-[340px] overflow-y-auto rounded-3xl bg-[#f3f7ef] p-5 shadow-2xl"
+            onClick={(click_event) => click_event.stopPropagation()}
+          >
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">
+                  Danger zone
+                </p>
+                <h2 className="mt-2 text-xl font-bold">批量删除事项</h2>
+              </div>
+              <button
+                aria-label="关闭批量删除"
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition active:scale-90"
+                disabled={deleting}
+                onClick={() => set_show_modal(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+            <p className="mt-2 text-sm leading-6 text-red-600">
+              按一个数据库字段的等值条件批量删除，删除后不可撤回。
+            </p>
+
+            <div className="mt-5 space-y-4">
           <label className="block text-sm font-semibold text-slate-700">
             字段
             <select
@@ -214,7 +237,7 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
             <button
               className="min-h-12 rounded-xl border border-slate-200 px-4 font-semibold text-slate-600 transition active:scale-[0.98] active:bg-slate-100"
               disabled={deleting}
-              onClick={() => set_expanded(false)}
+              onClick={() => set_show_modal(false)}
               type="button"
             >
               取消
@@ -228,8 +251,10 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
               {deleting ? "删除中…" : "永久删除"}
             </button>
           </div>
+            </div>
+          </section>
         </div>
       )}
-    </section>
+    </>
   );
 }

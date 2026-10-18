@@ -129,9 +129,13 @@ export function EventForm({
     <div
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-[15px] backdrop-blur-sm"
+      onClick={() => !saving && on_close()}
       role="dialog"
     >
-      <section className="hide-scrollbar max-h-[76dvh] w-full max-w-[340px] overflow-y-auto rounded-3xl bg-[#f3f7ef] p-4 shadow-2xl">
+      <section
+        className="hide-scrollbar max-h-[76dvh] w-full max-w-[340px] overflow-y-auto rounded-3xl bg-[#f3f7ef] p-4 shadow-2xl"
+        onClick={(click_event) => click_event.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">
@@ -178,9 +182,7 @@ export function EventForm({
               </select>
               <span className="mt-1.5 block text-xs font-normal leading-5 text-slate-500">
                 {type === "任务"
-                  ? repeat_type === "once"
-                    ? "任务：有明确的截止日期和时间。"
-                    : "重复任务：从开始日期起，按所选规则重复显示。"
+                  ? "任务：有明确单一截止日期"
                   : type === "事件"
                     ? "事件：会持续一段时间，需要填写开始与结束时间。"
                     : "课程：有明确的上课与下课时间。"}
