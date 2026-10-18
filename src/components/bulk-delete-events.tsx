@@ -3,87 +3,57 @@
 import { useState } from "react";
 import { remove_cache_prefix } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/client";
-import type { LoginSession } from "@/types/calendar";
+import type { EventRecord, LoginSession } from "@/types/calendar";
 
-type FieldName =
-  | "event_name"
-  | "type"
-  | "start_date"
-  | "start_time"
-  | "ddl_date"
-  | "ddl_time"
-  | "colour"
-  | "description"
-  | "event_status"
-  | "repeat_type";
+type FieldName = "event_name" | "type";
 
-type FieldOption = {
-  value: FieldName;
-  label: string;
-  input_type: "text" | "date" | "time" | "select";
-  values?: { value: string; label: string }[];
-};
-
-const field_options: FieldOption[] = [
-  { value: "event_name", label: "event_name", input_type: "text" },
-  {
-    value: "type",
-    label: "type",
-    input_type: "select",
-    values: [
-      { value: "任务", label: "任务" },
-      { value: "事件", label: "事件" },
-      { value: "课程", label: "课程（lecturer）" },
-    ],
-  },
-  { value: "start_date", label: "start_date", input_type: "date" },
-  { value: "start_time", label: "start_time", input_type: "time" },
-  { value: "ddl_date", label: "ddl_date", input_type: "date" },
-  { value: "ddl_time", label: "ddl_time", input_type: "time" },
-  { value: "colour", label: "colour", input_type: "text" },
-  { value: "description", label: "description", input_type: "text" },
-  {
-    value: "event_status",
-    label: "event_status",
-    input_type: "select",
-    values: [
-      { value: "unfinished", label: "未完成" },
-      { value: "completed", label: "已完成" },
-    ],
-  },
-  {
-    value: "repeat_type",
-    label: "repeat_type",
-    input_type: "select",
-    values: [
-      { value: "once", label: "一次性" },
-      { value: "daily", label: "每天" },
-      { value: "weekdays", label: "周一至周五" },
-      { value: "custom", label: "自定义" },
-    ],
-  },
-];
+const field_options: FieldName[] = ["event_name", "type"];
+const type_options = ["任务", "事件", "课程"];
 
 export function BulkDeleteEvents({ user_id, password }: LoginSession) {
   const [show_modal, set_show_modal] = useState(false);
   const [field_name, set_field_name] = useState<FieldName>("type");
   const [field_value, set_field_value] = useState("任务");
+  const [event_names, set_event_names] = useState<string[]>([]);
+  const [loading_names, set_loading_names] = useState(false);
   const [deleting, set_deleting] = useState(false);
   const [error, set_error] = useState("");
   const [result_message, set_result_message] = useState("");
-  const selected_field = field_options.find(
-    (option) => option.value === field_name,
-  )!;
-  const value_label =
-    selected_field.values?.find((option) => option.value === field_value)?.label ??
-    field_value;
+  const value_options = field_name === "type" ? type_options : event_names;
+  const value_label = field_value;
+
+  async function open_modal() {
+    set_show_modal(true);
+    set_loading_names(true);
+    set_error("");
+    set_result_message("");
+
+    const result = await createClient().rpc("get_events", {
+      user_id,
+      password,
+      from_date: null,
+      to_date: null,
+    });
+
+    if (result.error) {
+      set_error(result.error.message);
+    } else {
+      const names = Array.from(
+        new Set(
+          ((result.data ?? []) as EventRecord[]).map((event) => event.event_name),
+        ),
+      ).sort((first, second) => first.localeCompare(second, "zh-CN"));
+      set_event_names(names);
+      if (field_name === "event_name") set_field_value(names[0] ?? "");
+    }
+    set_loading_names(false);
+  }
 
   function change_field(next_field_name: FieldName) {
-    const next_field = field_options.find(
-      (option) => option.value === next_field_name,
-    )!;
     set_field_name(next_field_name);
-    set_field_value(next_field.values?.[0]?.value ?? "");
+    set_field_value(
+      next_field_name === "type" ? type_options[0] : (event_names[0] ?? ""),
+    );
     set_error("");
     set_result_message("");
   }
@@ -128,7 +98,7 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
     <>
       <button
         className="min-h-14 w-full rounded-2xl border border-red-200 bg-red-50 px-5 text-left font-bold text-red-700 shadow-sm transition active:scale-[0.98] active:bg-red-100"
-        onClick={() => set_show_modal(true)}
+        onClick={() => void open_modal()}
         type="button"
       >
         批量删除事项
@@ -171,15 +141,15 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
             字段
             <select
               className="field mt-1"
-              disabled={deleting}
+              disabled={deleting || loading_names}
               onChange={(change_event) =>
                 change_field(change_event.target.value as FieldName)
               }
               value={field_name}
             >
               {field_options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+                <option key={option} value={option}>
+                  {option}
                 </option>
               ))}
             </select>
@@ -187,35 +157,27 @@ export function BulkDeleteEvents({ user_id, password }: LoginSession) {
 
           <label className="block text-sm font-semibold text-slate-700">
             等于
-            {selected_field.input_type === "select" ? (
-              <select
-                className="field mt-1"
-                disabled={deleting}
-                onChange={(change_event) => {
-                  set_field_value(change_event.target.value);
-                  set_result_message("");
-                }}
-                value={field_value}
-              >
-                {selected_field.values?.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+            <select
+              className="field mt-1"
+              disabled={deleting || loading_names || value_options.length === 0}
+              onChange={(change_event) => {
+                set_field_value(change_event.target.value);
+                set_result_message("");
+              }}
+              value={field_value}
+            >
+              {loading_names && field_name === "event_name" ? (
+                <option value="">正在读取事项名称…</option>
+              ) : value_options.length > 0 ? (
+                value_options.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className="field mt-1"
-                disabled={deleting}
-                onChange={(change_event) => {
-                  set_field_value(change_event.target.value);
-                  set_result_message("");
-                }}
-                placeholder="请输入完全匹配的值"
-                type={selected_field.input_type}
-                value={field_value}
-              />
-            )}
+                ))
+              ) : (
+                <option value="">暂无可选事项</option>
+              )}
+            </select>
           </label>
 
           <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">

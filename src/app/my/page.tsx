@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/auth-form";
 import { BulkDeleteEvents } from "@/components/bulk-delete-events";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { CourseImport } from "@/components/course-import";
+import { CourseNameEditor } from "@/components/course-name-editor";
 import { useLogin } from "@/components/login-provider";
 
 export default function MyPage() {
@@ -23,11 +24,8 @@ export default function MyPage() {
       </header>
 
       <div className="grid gap-5 px-5 pb-32 pt-7">
-        <CourseImport {...login_session} />
-        <BulkDeleteEvents {...login_session} />
-
         <section className="rounded-[1.6rem] border border-white bg-white/80 p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-400">当前 user_id</p>
+          <p className="text-sm font-semibold text-slate-400">当前用户</p>
           <p className="mt-2 break-all text-xl font-bold">{login_session.user_id}</p>
           <button
             className="mt-6 min-h-14 w-full rounded-2xl border border-slate-200 bg-white px-5 font-bold text-slate-600"
@@ -37,6 +35,10 @@ export default function MyPage() {
             退出登录
           </button>
         </section>
+
+        <CourseImport {...login_session} />
+        <CourseNameEditor {...login_session} />
+        <BulkDeleteEvents {...login_session} />
       </div>
 
       <BottomNavigation active_item="my" />

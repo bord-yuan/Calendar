@@ -8,7 +8,6 @@ import {
   eventOccursOnDate,
   formatEventCountdown,
   formatEventTime,
-  formatTime,
   getEventStatus,
   statusLabels,
 } from "@/lib/calendar";
@@ -219,7 +218,6 @@ export function WeekView({
 function WeekTimeline({
   week_start,
   events,
-  now,
   on_select,
 }: Omit<WeekViewProps, "view_mode" | "on_status_change">) {
   const [selected_events, set_selected_events] = useState<EventRecord[]>([]);
@@ -332,7 +330,6 @@ function WeekTimeline({
                 >
                   {event_groups.map((event_group) => {
                     const event = event_group[0];
-                    const status = getEventStatus(event, now);
                     const range = event_range_on_day(event, day);
                     const visible_start = Math.max(range.start, 8 * 60);
                     const visible_end = Math.min(range.end, 24 * 60);
@@ -347,7 +344,7 @@ function WeekTimeline({
 
                     return (
                       <button
-                        className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border-l-[3px] px-1 py-1 text-left shadow-sm transition active:scale-95 active:brightness-90 ${status === "ended" ? "opacity-55" : ""}`}
+                        className="absolute inset-x-0.5 z-10 overflow-hidden rounded-md border-l-[3px] px-1 py-1 text-left shadow-sm transition active:scale-95 active:brightness-90"
                         key={event_group
                           .map(
                             (group_event) =>
@@ -363,7 +360,7 @@ function WeekTimeline({
                           backgroundColor:
                             event_group.length > 1
                               ? "#f1f5f9"
-                              : `${event.colour}22`,
+                              : "#ffffff",
                           borderLeftColor:
                             event_group.length > 1 ? "#475569" : event.colour,
                           height: event_group.length > 1 ? 52 : height,
@@ -371,25 +368,30 @@ function WeekTimeline({
                         }}
                         type="button"
                       >
-                        <span className="block truncate text-[10px] font-bold leading-3 text-slate-800">
+                        {event_group.length === 1 && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0"
+                            style={{ backgroundColor: `${event.colour}22` }}
+                          />
+                        )}
+                        <span
+                          className="relative z-10 line-clamp-2 text-[10px] font-bold leading-3 text-slate-800"
+                        >
                           {event_group.length > 1 ? "多个事项" : event.event_name}
                         </span>
                         {event_group.length === 1 &&
                           event.type === "课程" &&
                           course_location(event.description) && (
-                            <span className="mt-0.5 block truncate text-[8px] leading-3 text-slate-500">
+                            <span className="relative z-10 mt-0.5 block truncate text-[10px] font-semibold leading-3 text-slate-600">
                               {course_location(event.description)}
                             </span>
                           )}
-                        <span
-                          className={`${event.type === "课程" ? "mt-0.5" : "mt-1"} block text-[9px] font-semibold leading-3 tabular-nums text-slate-500`}
-                        >
-                          {event_group.length > 1
-                            ? `${event_group.length} 项`
-                            : event.type !== "任务"
-                            ? `${minutes_time(visible_start)}–${minutes_time(visible_end)}`
-                            : formatTime(event.ddl_time)}
-                        </span>
+                        {event_group.length > 1 && (
+                          <span className="relative z-10 mt-1 block text-[9px] font-semibold leading-3 text-slate-500">
+                            {event_group.length} 项
+                          </span>
+                        )}
                       </button>
                     );
                   })}
