@@ -13,8 +13,9 @@ import {
   addDays,
   dateKey,
   eventDate,
-  formatFullDate,
-  formatTime,
+  formatEventSchedule,
+  formatEventTime,
+  formatRepeat,
   getEventStatus,
   startOfWeek,
 } from "@/lib/calendar";
@@ -68,9 +69,9 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     const cache_key =
       load_mode === "all"
         ? null
-        : `calendar_events:${login_session.user_id}:${load_mode}:${from_date}:${to_date}`;
+        : `calendar_events:v2:${login_session.user_id}:${load_mode}:${from_date}:${to_date}`;
     const request_key =
-      cache_key ?? `calendar_events:${login_session.user_id}:all`;
+      cache_key ?? `calendar_events:v2:${login_session.user_id}:all`;
     const cached_events = cache_key
       ? read_cache<EventRecord[]>(cache_key)
       : null;
@@ -136,10 +137,8 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     return () => window.clearTimeout(request);
   }, [load_events, login_session, mode, week_start]);
 
-  function open_event(event_id: string) {
-    set_selected_event(
-      events.find((event) => event.event_id === event_id) ?? null,
-    );
+  function open_event(event: EventRecord) {
+    set_selected_event(event);
     set_show_form(true);
   }
 
@@ -173,17 +172,17 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     void load_events("week", next_week_start);
   }
 
-  async function update_event_status(event_id: string) {
+  async function update_event_status(event: EventRecord) {
     if (!login_session) return;
-
-    const event = events.find((item) => item.event_id === event_id);
-    if (!event) return;
 
     const event_status: EventRecord["event_status"] =
       event.event_status === "completed" ? "unfinished" : "completed";
     set_events((current_events) => {
       const next_events = current_events.map((item) =>
-        item.event_id === event_id ? { ...item, event_status } : item,
+        item.event_id === event.event_id &&
+        item.occurrence_date === event.occurrence_date
+          ? { ...item, event_status }
+          : item,
       );
       if (visible_cache_key.current) {
         write_cache(visible_cache_key.current, next_events);
@@ -197,7 +196,8 @@ export function CalendarApp({ mode }: CalendarAppProps) {
       {
         user_id: login_session.user_id,
         password: login_session.password,
-        event_id,
+        event_id: event.event_id,
+        occurrence_date: event.occurrence_date,
         event_status,
       },
     );
@@ -205,7 +205,8 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     if (update_error || !updated) {
       set_events((current_events) => {
         const next_events = current_events.map((item) =>
-          item.event_id === event_id
+          item.event_id === event.event_id &&
+          item.occurrence_date === event.occurrence_date
             ? { ...item, event_status: event.event_status }
             : item,
         );
@@ -232,29 +233,43 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     <main className="app-shell text-slate-950">
       <div className="px-5 pb-32 pt-7">
         <section className="mb-7">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-700">
-              {mode === "week"
-                ? view_mode === "today"
-                  ? "Today"
-                  : view_mode === "week"
-                    ? "This week"
-                    : "Calendar"
-                : "All events"}
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              {mode === "week"
-                ? view_mode === "today"
-                  ? "今日事项"
-                  : view_mode === "week"
-                    ? "本周事项"
-                    : "选择日程视图"
-                : "全部 event"}
-            </h1>
-            {mode === "all" && (
-              <p className="mt-2 text-sm text-slate-500">
-                按 ddl_date 和 ddl_time 排列
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-700">
+                {mode === "week"
+                  ? view_mode === "today"
+                    ? "Today"
+                    : view_mode === "week"
+                      ? "This week"
+                      : "Calendar"
+                  : "All events"}
               </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+                {mode === "week"
+                  ? view_mode === "today"
+                    ? "今日事项"
+                    : view_mode === "week"
+                      ? "本周事项"
+                      : "选择日程视图"
+                  : "全部 event"}
+              </h1>
+              {mode === "all" && (
+                <p className="mt-2 text-sm text-slate-500">
+                  按 ddl_date 和 ddl_time 排列
+                </p>
+              )}
+            </div>
+            {mode === "week" && view_mode === "today" && (
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-bold text-teal-700">
+                  {new Intl.DateTimeFormat("zh-CN", {
+                    weekday: "long",
+                  }).format(now)}
+                </p>
+                <p className="mt-1 text-lg font-bold">
+                  {now.getMonth() + 1}月{now.getDate()}日
+                </p>
+              </div>
             )}
           </div>
         </section>
@@ -299,7 +314,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
                   即将到期
                 </p>
                 <p className="mt-1 font-semibold">
-                  {reminders[0].event_name} · {formatTime(reminders[0].ddl_time)}
+                  {reminders[0].event_name} · {formatEventTime(reminders[0])}
                 </p>
               </section>
             )}
@@ -325,7 +340,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
             events={events}
             now={now}
             on_select={open_event}
-            on_status_change={(event_id) => void update_event_status(event_id)}
+            on_status_change={(event) => void update_event_status(event)}
             view_mode={view_mode}
             week_start={week_start}
           />
@@ -363,11 +378,13 @@ function AllEvents({
 }: {
   events: EventRecord[];
   now: Date;
-  on_select: (event_id: string) => void;
+  on_select: (event: EventRecord) => void;
 }) {
-  const upcoming_events = events.filter((event) => eventDate(event) >= now);
+  const upcoming_events = events.filter(
+    (event) => event.repeat_type !== "once" || eventDate(event) >= now,
+  );
   const ended_events = events
-    .filter((event) => eventDate(event) < now)
+    .filter((event) => event.repeat_type === "once" && eventDate(event) < now)
     .sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
 
   return (
@@ -385,7 +402,7 @@ function EventGroup({
 }: {
   events: EventRecord[];
   title: string;
-  on_select: (event_id: string) => void;
+  on_select: (event: EventRecord) => void;
 }) {
   return (
     <section className="rounded-[1.8rem] border border-white bg-white/75 p-4 shadow-sm sm:p-6">
@@ -399,8 +416,8 @@ function EventGroup({
         {events.map((event) => (
           <button
             className="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left transition active:scale-[0.98] active:bg-slate-50"
-            key={event.event_id}
-            onClick={() => on_select(event.event_id)}
+            key={`${event.event_id}:${event.occurrence_date}`}
+            onClick={() => on_select(event)}
             type="button"
           >
             <span
@@ -410,9 +427,11 @@ function EventGroup({
             <span className="min-w-0 flex-1">
               <span className="block truncate font-bold">{event.event_name}</span>
               <span className="mt-1 block text-sm text-slate-500">
-                {formatFullDate(eventDate(event))} · {formatTime(event.ddl_time)}
+                {formatEventSchedule(event)}
               </span>
-              <span className="mt-2 block text-xs text-slate-400">{event.type}</span>
+              <span className="mt-2 block text-xs text-slate-400">
+                {event.type} · {formatRepeat(event)}
+              </span>
             </span>
             <span className="text-slate-300">›</span>
           </button>

@@ -18,7 +18,7 @@ export function BottomNavigation({
   on_view_change,
 }: BottomNavigationProps) {
   return (
-    <nav className="fixed bottom-0 left-1/2 z-40 flex w-full max-w-[430px] -translate-x-1/2 items-end border-t border-slate-200 bg-white/95 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex w-full items-end border-t border-slate-200 bg-white/95 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl">
       <div className="flex min-w-0 flex-1 rounded-2xl bg-slate-100 p-1.5">
         {active_item === "calendar" ? (
           <>
