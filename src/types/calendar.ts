@@ -9,7 +9,7 @@ export type EventRecord = {
   user_id: string;
   event_id: string;
   event_name: string;
-  type: "任务" | "事件";
+  type: "任务" | "事件" | "课程";
   start_date: string | null;
   start_time: string | null;
   ddl_date: string;

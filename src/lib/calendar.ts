@@ -29,14 +29,14 @@ export function eventDate(event: EventRecord) {
 }
 
 export function eventStartDate(event: EventRecord) {
-  if (event.type === "事件" && event.start_date && event.start_time) {
+  if (event.type !== "任务" && event.start_date && event.start_time) {
     return new Date(`${event.start_date}T${event.start_time}`);
   }
   return eventDate(event);
 }
 
 export function eventDeadlineDate(event: EventRecord) {
-  return event.type === "事件" ? eventStartDate(event) : eventDate(event);
+  return event.type !== "任务" ? eventStartDate(event) : eventDate(event);
 }
 
 export function formatTime(ddl_time: string) {
@@ -102,7 +102,7 @@ export function formatEventCountdown(event: EventRecord, now: Date) {
   const total_minutes = Math.floor(Math.abs(difference) / (60 * 1000));
   const hours = Math.floor(total_minutes / 60);
   const minutes = total_minutes % 60;
-  const duration = `${hours}h${minutes}min`;
+  const duration = hours === 0 ? `${minutes}min` : `${hours}h${minutes}min`;
 
   return difference < 0 ? `过期 ${duration}` : duration;
 }

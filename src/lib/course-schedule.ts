@@ -1,0 +1,16 @@
+export const course_periods = [
+  { period: 1, start: 8 * 60, end: 8 * 60 + 45 },
+  { period: 2, start: 8 * 60 + 50, end: 9 * 60 + 35 },
+  { period: 3, start: 9 * 60 + 50, end: 10 * 60 + 35 },
+  { period: 4, start: 10 * 60 + 40, end: 11 * 60 + 25 },
+  { period: 5, start: 11 * 60 + 30, end: 12 * 60 + 15 },
+  { period: 6, start: 13 * 60, end: 13 * 60 + 45 },
+  { period: 7, start: 13 * 60 + 50, end: 14 * 60 + 35 },
+  { period: 8, start: 14 * 60 + 45, end: 15 * 60 + 30 },
+  { period: 9, start: 15 * 60 + 40, end: 16 * 60 + 25 },
+  { period: 10, start: 16 * 60 + 35, end: 17 * 60 + 20 },
+  { period: 11, start: 17 * 60 + 25, end: 18 * 60 + 10 },
+  { period: 12, start: 18 * 60 + 30, end: 19 * 60 + 15 },
+  { period: 13, start: 19 * 60 + 20, end: 20 * 60 + 5 },
+  { period: 14, start: 20 * 60 + 10, end: 20 * 60 + 55 },
+] as const;

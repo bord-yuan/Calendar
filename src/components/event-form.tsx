@@ -2,38 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { dateKey } from "@/lib/calendar";
+import { colours, more_colours, randomColour } from "@/lib/colours";
 import { createClient } from "@/lib/supabase/client";
 import type { EventRecord, LoginSession, RepeatType } from "@/types/calendar";
 
-const colours = ["#0f766e", "#2563eb", "#7c3aed", "#db2777", "#ea580c"];
-const more_colours = [
-  "#111827",
-  "#475569",
-  "#64748b",
-  "#94a3b8",
-  "#b91c1c",
-  "#ef4444",
-  "#f97316",
-  "#f59e0b",
-  "#eab308",
-  "#84cc16",
-  "#22c55e",
-  "#10b981",
-  "#14b8a6",
-  "#06b6d4",
-  "#0ea5e9",
-  "#3b82f6",
-  "#6366f1",
-  "#8b5cf6",
-  "#a855f7",
-  "#d946ef",
-  "#ec4899",
-  "#f43f5e",
-  "#9f1239",
-  "#78350f",
-];
-const all_colours = [...colours, ...more_colours];
-const types = ["任务", "事件"] as const;
+const types = ["任务", "事件", "课程"] as const;
 const repeat_options: { label: string; value: RepeatType }[] = [
   { label: "一次性", value: "once" },
   { label: "每天", value: "daily" },
@@ -50,10 +23,6 @@ const weekday_options = [
   { label: "日", value: 7 },
 ];
 
-function random_colour() {
-  return all_colours[Math.floor(Math.random() * all_colours.length)];
-}
-
 type EventFormProps = LoginSession & {
   event: EventRecord | null;
   on_close: () => void;
@@ -69,7 +38,7 @@ export function EventForm({
 }: EventFormProps) {
   const [event_name, set_event_name] = useState(event?.event_name ?? "");
   const [type, set_type] = useState<(typeof types)[number]>(
-    event?.type === "事件" ? "事件" : "任务",
+    event?.type ?? "任务",
   );
   const [repeat_type, set_repeat_type] = useState<RepeatType>(
     event?.repeat_type ?? "once",
@@ -87,7 +56,7 @@ export function EventForm({
     event?.series_ddl_date ?? event?.ddl_date ?? dateKey(new Date()),
   );
   const [ddl_time, set_ddl_time] = useState(event?.ddl_time.slice(0, 5) ?? "09:00");
-  const [colour, set_colour] = useState(() => event?.colour ?? random_colour());
+  const [colour, set_colour] = useState(() => event?.colour ?? randomColour());
   const [show_more_colours, set_show_more_colours] = useState(false);
   const [description, set_description] = useState(event?.description ?? "");
   const [saving, set_saving] = useState(false);
@@ -98,10 +67,10 @@ export function EventForm({
     set_error("");
 
     if (
-      type === "事件" &&
+      type !== "任务" &&
       `${start_date}T${start_time}` >= `${ddl_date}T${ddl_time}`
     ) {
-      set_error("事件的开始时间必须早于结束时间");
+      set_error(`${type}的开始时间必须早于结束时间`);
       return;
     }
 
@@ -120,8 +89,8 @@ export function EventForm({
       type,
       repeat_type,
       repeat_days: repeat_type === "custom" ? repeat_days : [],
-      start_date: type === "事件" ? start_date : null,
-      start_time: type === "事件" ? start_time : null,
+      start_date: type !== "任务" ? start_date : null,
+      start_time: type !== "任务" ? start_time : null,
       ddl_date,
       ddl_time,
       colour,
@@ -209,8 +178,12 @@ export function EventForm({
               </select>
               <span className="mt-1.5 block text-xs font-normal leading-5 text-slate-500">
                 {type === "任务"
-                  ? "任务：有明确的截止日期和时间。"
-                  : "事件：会持续一段时间，需要填写开始与结束时间。"}
+                  ? repeat_type === "once"
+                    ? "任务：有明确的截止日期和时间。"
+                    : "重复任务：从开始日期起，按所选规则重复显示。"
+                  : type === "事件"
+                    ? "事件：会持续一段时间，需要填写开始与结束时间。"
+                    : "课程：有明确的上课与下课时间。"}
               </span>
             </label>
             <label className="block text-sm font-semibold text-slate-700">
@@ -258,7 +231,7 @@ export function EventForm({
                 </div>
               </fieldset>
             )}
-            {type === "事件" && (
+            {type !== "任务" && (
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm font-semibold text-slate-700">
                   开始日期
@@ -282,9 +255,13 @@ export function EventForm({
                 </label>
               </div>
             )}
-            <div className={`grid gap-3 ${type === "事件" ? "grid-cols-2" : ""}`}>
+            <div className={`grid gap-3 ${type !== "任务" ? "grid-cols-2" : ""}`}>
               <label className="block text-sm font-semibold text-slate-700">
-                {type === "事件" ? "结束日期" : "截止日期"}
+                {type !== "任务"
+                  ? "结束日期"
+                  : repeat_type === "once"
+                    ? "截止日期"
+                    : "开始日期"}
                 <input
                   className="field !mt-1 !rounded-xl !px-3 !py-2"
                   onChange={(form_event) => set_ddl_date(form_event.target.value)}
@@ -294,7 +271,7 @@ export function EventForm({
                 />
               </label>
               <label className="block text-sm font-semibold text-slate-700">
-                {type === "事件" ? "结束时间" : "截止时间"}
+                {type !== "任务" ? "结束时间" : "截止时间"}
                 <input
                   className="field !mt-1 !rounded-xl !px-3 !py-2"
                   onChange={(form_event) => set_ddl_time(form_event.target.value)}

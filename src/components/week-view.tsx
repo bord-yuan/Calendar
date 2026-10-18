@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   addDays,
   dateKey,
@@ -11,13 +12,27 @@ import {
   getEventStatus,
   statusLabels,
 } from "@/lib/calendar";
+import { course_periods } from "@/lib/course-schedule";
 import type { EventRecord, EventStatus } from "@/types/calendar";
 import type { CalendarViewMode } from "@/components/bottom-navigation";
 
+type TimelineBlock = {
+  start: number;
+  end: number;
+  height: number;
+  kind: "period" | "break" | "hour";
+};
+
 const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
-const timeline_hours = Array.from({ length: 17 }, (_, index) => index + 8);
-const hour_height = 64;
-const timeline_height = (timeline_hours.length - 1) * hour_height;
+const after_course_hours = [21, 22, 23, 24];
+const course_period_height = 48;
+const course_break_height = 10;
+const after_course_hour_height = 64;
+const timeline_blocks = build_timeline_blocks();
+const timeline_height = timeline_blocks.reduce(
+  (height, block) => height + block.height,
+  0,
+);
 
 const status_styles: Record<EventStatus, string> = {
   upcoming: "bg-slate-100 text-slate-500",
@@ -42,6 +57,8 @@ export function WeekView({
   on_status_change,
   view_mode,
 }: WeekViewProps) {
+  const [show_completed, set_show_completed] = useState(false);
+
   if (view_mode === "week") {
     return (
       <WeekTimeline
@@ -64,18 +81,45 @@ export function WeekView({
         const events_for_day = events.filter((event) =>
           eventOccursOnDate(event, day),
         );
-        const day_events = [
-          ...events_for_day
-            .filter((event) => event.event_status === "unfinished")
-            .sort(sort_by_ddl),
-          ...events_for_day
-            .filter((event) => event.event_status === "completed")
-            .sort(sort_by_ddl),
+        const unfinished_events = events_for_day
+          .filter((event) => event.event_status === "unfinished")
+          .sort(sort_by_ddl);
+        const completed_events = events_for_day
+          .filter((event) => event.event_status === "completed")
+          .sort(sort_by_ddl);
+        const day_items: (EventRecord | "completed-toggle")[] = [
+          ...unfinished_events,
+          ...(completed_events.length > 0 ? (["completed-toggle"] as const) : []),
+          ...(show_completed ? completed_events : []),
         ];
         return (
           <section key={weekday}>
             <div className="space-y-2">
-              {day_events.map((event) => {
+              {day_items.map((event) => {
+                if (event === "completed-toggle") {
+                  return (
+                    <div className="flex items-center gap-3" key={event}>
+                      <span className="size-12 shrink-0" />
+                      <button
+                        aria-expanded={show_completed}
+                        className="flex min-h-12 flex-1 items-center justify-between rounded-2xl bg-slate-100 px-4 text-sm font-bold text-slate-600 transition active:scale-[0.98] active:bg-slate-200"
+                        onClick={() => set_show_completed((current) => !current)}
+                        type="button"
+                      >
+                        <span>已完成事项</span>
+                        <span className="flex items-center gap-2">
+                          <span className="rounded-full bg-white px-2 py-0.5 text-xs text-slate-500">
+                            {completed_events.length}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {show_completed ? "收起" : "展开"}
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  );
+                }
+
                 const status = getEventStatus(event, now);
                 const is_completed = event.event_status === "completed";
                 return (
@@ -149,7 +193,7 @@ export function WeekView({
                           {is_completed ? "已完成" : statusLabels[status]}
                         </span>
                         <span className="whitespace-nowrap text-xs font-semibold text-slate-400">
-                          {formatEventCountdown(event, now)}
+                          {is_completed ? "完成" : formatEventCountdown(event, now)}
                         </span>
                       </span>
                     </button>
@@ -157,7 +201,7 @@ export function WeekView({
                 );
               })}
 
-              {day_events.length === 0 && (
+              {events_for_day.length === 0 && (
                 <p className="py-10 text-center text-sm text-slate-300">
                   暂无 event
                 </p>
@@ -176,6 +220,7 @@ function WeekTimeline({
   now,
   on_select,
 }: Omit<WeekViewProps, "view_mode" | "on_status_change">) {
+  const [selected_events, set_selected_events] = useState<EventRecord[]>([]);
   const today = dateKey(new Date());
   const days = weekdays.map((weekday, index) => ({
     day: addDays(week_start, index),
@@ -183,8 +228,9 @@ function WeekTimeline({
   }));
 
   return (
-    <section className="overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-sm">
-      <header className="grid grid-cols-[44px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-white">
+    <>
+      <section className="overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white shadow-sm">
+      <header className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-slate-200 bg-white">
         <div />
         {days.map(({ day, weekday }) => {
           const is_today = dateKey(day) === today;
@@ -202,20 +248,31 @@ function WeekTimeline({
 
       <div className="flex">
         <div
-          className="relative w-11 shrink-0 bg-slate-50"
+          className="relative w-16 shrink-0 bg-slate-50"
           style={{ height: timeline_height }}
         >
-          {timeline_hours.map((hour) => (
+          {course_periods.map((period) => (
+            <span
+              className="absolute inset-x-0 flex flex-col items-center justify-center text-slate-400"
+              key={period.period}
+              style={{
+                height: course_period_height,
+                top: timeline_position(period.start),
+              }}
+            >
+              <span className="text-[9px] font-bold">{period.period}</span>
+              <span className="mt-0.5 whitespace-nowrap text-[8px] font-semibold tabular-nums">
+                {minutes_time(period.start)}–{minutes_time(period.end)}
+              </span>
+            </span>
+          ))}
+          {after_course_hours.map((hour) => (
             <span
               className={`absolute right-1 text-[10px] font-semibold tabular-nums text-slate-400 ${
-                hour === 8
-                  ? "translate-y-1"
-                  : hour === 24
-                    ? "-translate-y-full -mt-1"
-                    : "-translate-y-1/2"
+                hour === 24 ? "-translate-y-full -mt-1" : "-translate-y-1/2"
               }`}
               key={hour}
-              style={{ top: (hour - 8) * hour_height }}
+              style={{ top: timeline_position(hour * 60) }}
             >
               {String(hour).padStart(2, "0")}:00
             </span>
@@ -223,58 +280,85 @@ function WeekTimeline({
         </div>
 
         <div className="relative min-w-0 flex-1" style={{ height: timeline_height }}>
-          {timeline_hours.map((hour) => (
+          {timeline_blocks.map((block, index) => (
             <div
-              className="absolute inset-x-0 border-t border-slate-200"
-              key={hour}
-              style={{ top: (hour - 8) * hour_height }}
+              className={`absolute inset-x-0 border-t border-slate-200 ${
+                block.kind === "break" ? "bg-slate-100/70" : ""
+              }`}
+              key={`${block.kind}:${block.start}:${index}`}
+              style={{
+                height: block.height,
+                top: timeline_position(block.start),
+              }}
             />
           ))}
+          <div
+            className="absolute inset-x-0 border-t border-slate-200"
+            style={{ top: timeline_height }}
+          />
 
           <div className="absolute inset-0 grid grid-cols-7">
             {days.map(({ day, weekday }) => {
               const day_events = events.filter((event) => {
+                if (!eventOccursOnDate(event, day)) return false;
                 const range = event_range_on_day(event, day);
                 return range.end > 8 * 60 && range.start < 24 * 60;
               });
+              const event_groups = group_events_by_start(day_events, day);
 
               return (
                 <div
                   className="relative min-w-0 border-l border-slate-200 last:border-r"
                   key={weekday}
                 >
-                  {day_events.map((event) => {
+                  {event_groups.map((event_group) => {
+                    const event = event_group[0];
                     const status = getEventStatus(event, now);
                     const range = event_range_on_day(event, day);
                     const visible_start = Math.max(range.start, 8 * 60);
                     const visible_end = Math.min(range.end, 24 * 60);
-                    const top = ((visible_start - 8 * 60) / 60) * hour_height;
+                    const top = timeline_position(visible_start);
                     const height =
-                      event.type === "事件"
+                      event.type !== "任务"
                         ? Math.max(
                             28,
-                            ((visible_end - visible_start) / 60) * hour_height,
+                            timeline_position(visible_end) - top,
                           )
                         : 52;
 
                     return (
                       <button
                         className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border-l-[3px] px-1 py-1 text-left shadow-sm transition active:scale-95 active:brightness-90 ${status === "ended" ? "opacity-55" : ""}`}
-                        key={`${event.event_id}:${event.occurrence_date}`}
-                        onClick={() => on_select(event)}
+                        key={event_group
+                          .map(
+                            (group_event) =>
+                              `${group_event.event_id}:${group_event.occurrence_date}`,
+                          )
+                          .join("|")}
+                        onClick={() =>
+                          event_group.length > 1
+                            ? set_selected_events(event_group)
+                            : on_select(event)
+                        }
                         style={{
-                          backgroundColor: `${event.colour}22`,
-                          borderLeftColor: event.colour,
-                          height,
+                          backgroundColor:
+                            event_group.length > 1
+                              ? "#f1f5f9"
+                              : `${event.colour}22`,
+                          borderLeftColor:
+                            event_group.length > 1 ? "#475569" : event.colour,
+                          height: event_group.length > 1 ? 52 : height,
                           top,
                         }}
                         type="button"
                       >
                         <span className="block truncate text-[10px] font-bold leading-3 text-slate-800">
-                          {event.event_name}
+                          {event_group.length > 1 ? "多个事项" : event.event_name}
                         </span>
                         <span className="mt-1 block text-[9px] font-semibold tabular-nums text-slate-500">
-                          {event.type === "事件"
+                          {event_group.length > 1
+                            ? `${event_group.length} 项`
+                            : event.type !== "任务"
                             ? `${minutes_time(visible_start)}–${minutes_time(visible_end)}`
                             : formatTime(event.ddl_time)}
                         </span>
@@ -287,7 +371,72 @@ function WeekTimeline({
           </div>
         </div>
       </div>
-    </section>
+      </section>
+
+      {selected_events.length > 0 && (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
+          onClick={() => set_selected_events([])}
+          role="dialog"
+        >
+          <section
+            className="max-h-[76dvh] w-full max-w-sm overflow-y-auto rounded-3xl bg-[#f3f7ef] p-5 shadow-2xl"
+            onClick={(click_event) => click_event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
+                  Same time
+                </p>
+                <h2 className="mt-1 text-xl font-bold">多个事项</h2>
+              </div>
+              <button
+                aria-label="关闭"
+                className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition active:scale-90"
+                onClick={() => set_selected_events([])}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {selected_events.map((event) => (
+                <button
+                  className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm transition active:scale-[0.98]"
+                  key={`${event.event_id}:${event.occurrence_date}`}
+                  onClick={() => {
+                    set_selected_events([]);
+                    on_select(event);
+                  }}
+                  type="button"
+                >
+                  <span
+                    className="h-12 w-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: event.colour }}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold">
+                      {event.event_name}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      {formatEventTime(event)} · {event.type}
+                    </span>
+                    {event.description && (
+                      <span className="mt-1 block truncate text-xs text-slate-400">
+                        {event.description}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-slate-300">›</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -298,6 +447,25 @@ function event_minutes(ddl_time: string) {
 
 function sort_by_ddl(first: EventRecord, second: EventRecord) {
   return eventDeadlineDate(first).getTime() - eventDeadlineDate(second).getTime();
+}
+
+function group_events_by_start(events: EventRecord[], day: Date) {
+  const sorted_events = events
+    .map((event) => ({ event, start: event_range_on_day(event, day).start }))
+    .sort((first, second) => first.start - second.start);
+  const groups: EventRecord[][] = [];
+  let previous_start: number | null = null;
+
+  for (const { event, start } of sorted_events) {
+    if (previous_start !== null && start - previous_start < 30) {
+      groups[groups.length - 1].push(event);
+    } else {
+      groups.push([event]);
+    }
+    previous_start = start;
+  }
+
+  return groups;
 }
 
 function event_range_on_day(event: EventRecord, day: Date) {
@@ -317,4 +485,57 @@ function minutes_time(minutes: number) {
   const hour = Math.floor(minutes / 60);
   const minute = minutes % 60;
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function build_timeline_blocks() {
+  const blocks: TimelineBlock[] = [];
+
+  course_periods.forEach((period, index) => {
+    blocks.push({
+      start: period.start,
+      end: period.end,
+      height: course_period_height,
+      kind: "period",
+    });
+
+    const next_start = course_periods[index + 1]?.start ?? 21 * 60;
+    if (period.end < next_start) {
+      blocks.push({
+        start: period.end,
+        end: next_start,
+        height: course_break_height,
+        kind: "break",
+      });
+    }
+  });
+
+  for (let hour = 21; hour < 24; hour += 1) {
+    blocks.push({
+      start: hour * 60,
+      end: (hour + 1) * 60,
+      height: after_course_hour_height,
+      kind: "hour",
+    });
+  }
+
+  return blocks;
+}
+
+function timeline_position(minutes: number) {
+  let position = 0;
+
+  for (const block of timeline_blocks) {
+    if (minutes <= block.start) return position;
+
+    if (minutes < block.end) {
+      return (
+        position +
+        ((minutes - block.start) / (block.end - block.start)) * block.height
+      );
+    }
+
+    position += block.height;
+  }
+
+  return timeline_height;
 }
