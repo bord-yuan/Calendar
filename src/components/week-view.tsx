@@ -181,7 +181,13 @@ export function WeekView({
                         >
                           {formatEventTime(event)} · {event.type}
                         </p>
-                        <span className="line-clamp-3 w-20 text-center text-xs leading-4 text-slate-400">
+                        <span
+                          className={`line-clamp-3 w-20 text-center ${
+                            event.type === "课程"
+                              ? "text-xl font-black leading-tight text-slate-700"
+                              : "text-xs leading-4 text-slate-400"
+                          }`}
+                        >
                           {event.type === "课程"
                             ? course_location(event.description)
                             : event.description}

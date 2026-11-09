@@ -17,6 +17,18 @@ export function addDays(date: Date, days: number) {
   return result;
 }
 
+export function getWeekNumber(date: Date) {
+  const target = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+  const day = target.getUTCDay() || 7;
+  target.setUTCDate(target.getUTCDate() + 4 - day);
+  const year_start = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+  return Math.ceil(
+    ((target.getTime() - year_start.getTime()) / 86_400_000 + 1) / 7,
+  );
+}
+
 export function dateKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

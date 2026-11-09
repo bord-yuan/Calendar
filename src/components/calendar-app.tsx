@@ -17,6 +17,7 @@ import {
   formatEventTime,
   formatRepeat,
   getEventStatus,
+  getWeekNumber,
   startOfWeek,
 } from "@/lib/calendar";
 import { createClient } from "@/lib/supabase/client";
@@ -253,6 +254,11 @@ export function CalendarApp({ mode }: CalendarAppProps) {
                       : "选择日程视图"
                   : "全部 event"}
               </h1>
+              {mode === "week" && view_mode === "week" && (
+                <p className="mt-2 text-base font-bold text-teal-700">
+                  第 {getWeekNumber(week_start)} 周
+                </p>
+              )}
               {mode === "all" && (
                 <p className="mt-2 text-sm text-slate-500">
                   按 ddl_date 和 ddl_time 排列
