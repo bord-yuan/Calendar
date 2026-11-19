@@ -12,7 +12,9 @@ import { WeekView } from "@/components/week-view";
 import {
   addDays,
   dateKey,
+  DEFAULT_FIRST_WEEK_MONDAY,
   eventDate,
+  firstWeekMondayCacheKey,
   formatEventSchedule,
   formatEventTime,
   formatRepeat,
@@ -21,7 +23,7 @@ import {
   startOfWeek,
 } from "@/lib/calendar";
 import { createClient } from "@/lib/supabase/client";
-import { read_cache, write_cache } from "@/lib/cache";
+import { cache_change_event, read_cache, write_cache } from "@/lib/cache";
 import type { EventRecord } from "@/types/calendar";
 
 type CalendarAppProps = {
@@ -41,6 +43,9 @@ export function CalendarApp({ mode }: CalendarAppProps) {
   const [selected_event, set_selected_event] = useState<EventRecord | null>(null);
   const [now, set_now] = useState(() => new Date());
   const [view_mode, set_view_mode] = useState<CalendarViewMode>("today");
+  const [first_week_monday, set_first_week_monday] = useState(
+    DEFAULT_FIRST_WEEK_MONDAY,
+  );
   const active_cache_key = useRef<string | null>(null);
   const visible_cache_key = useRef<string | null>(null);
 
@@ -48,6 +53,22 @@ export function CalendarApp({ mode }: CalendarAppProps) {
     const timer = window.setInterval(() => set_now(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!login_session) return;
+
+    const cache_key = firstWeekMondayCacheKey(login_session.user_id);
+    const load_first_week_monday = () => {
+      set_first_week_monday(
+        read_cache<string>(cache_key) || DEFAULT_FIRST_WEEK_MONDAY,
+      );
+    };
+
+    load_first_week_monday();
+    window.addEventListener(cache_change_event, load_first_week_monday);
+    return () =>
+      window.removeEventListener(cache_change_event, load_first_week_monday);
+  }, [login_session]);
 
   const load_events = useCallback(async (
     load_mode: EventLoadMode,
@@ -256,7 +277,7 @@ export function CalendarApp({ mode }: CalendarAppProps) {
               </h1>
               {mode === "week" && view_mode === "week" && (
                 <p className="mt-2 text-base font-bold text-teal-700">
-                  第 {getWeekNumber(week_start)} 周
+                  第 {getWeekNumber(week_start, first_week_monday)} 周
                 </p>
               )}
               {mode === "all" && (

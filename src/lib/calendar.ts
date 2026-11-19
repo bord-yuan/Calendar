@@ -2,6 +2,12 @@ import type { EventRecord, EventStatus } from "@/types/calendar";
 
 const SOON_IN_MS = 30 * 60 * 1000;
 
+export const DEFAULT_FIRST_WEEK_MONDAY = "2026-08-31";
+
+export function firstWeekMondayCacheKey(user_id: string) {
+  return `calendar_first_week_monday:${user_id}`;
+}
+
 export function startOfWeek(date: Date) {
   const result = new Date(date);
   const day = result.getDay();
@@ -17,16 +23,19 @@ export function addDays(date: Date, days: number) {
   return result;
 }
 
-export function getWeekNumber(date: Date) {
-  const target = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+export function getWeekNumber(date: Date, first_week_monday: string) {
+  const [year, month, day] = first_week_monday.split("-").map(Number);
+  const first_week_start = Date.UTC(year, month - 1, day);
+  const current_week_start = startOfWeek(date);
+  const current_week_start_utc = Date.UTC(
+    current_week_start.getFullYear(),
+    current_week_start.getMonth(),
+    current_week_start.getDate(),
   );
-  const day = target.getUTCDay() || 7;
-  target.setUTCDate(target.getUTCDate() + 4 - day);
-  const year_start = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-  return Math.ceil(
-    ((target.getTime() - year_start.getTime()) / 86_400_000 + 1) / 7,
-  );
+
+  return Math.floor(
+    (current_week_start_utc - first_week_start) / (7 * 86_400_000),
+  ) + 1;
 }
 
 export function dateKey(date: Date) {

@@ -1,23 +1,37 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import {
   buildCourseImportItems,
   parseCourseWorkbook,
   type ParsedCourseWorkbook,
 } from "@/lib/course-import";
+import {
+  DEFAULT_FIRST_WEEK_MONDAY,
+  firstWeekMondayCacheKey,
+} from "@/lib/calendar";
+import { read_cache, write_cache } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/client";
 import type { LoginSession } from "@/types/calendar";
 
 export function CourseImport({ user_id, password }: LoginSession) {
   const [show_modal, set_show_modal] = useState(false);
   const [file_name, set_file_name] = useState("");
-  const [first_week_monday, set_first_week_monday] = useState("");
+  const [first_week_monday, set_first_week_monday] = useState(
+    DEFAULT_FIRST_WEEK_MONDAY,
+  );
   const [parsed, set_parsed] = useState<ParsedCourseWorkbook | null>(null);
   const [reading, set_reading] = useState(false);
   const [importing, set_importing] = useState(false);
   const [error, set_error] = useState("");
   const [success, set_success] = useState("");
+
+  useEffect(() => {
+    set_first_week_monday(
+      read_cache<string>(firstWeekMondayCacheKey(user_id)) ||
+        DEFAULT_FIRST_WEEK_MONDAY,
+    );
+  }, [user_id]);
 
   async function select_file(change_event: ChangeEvent<HTMLInputElement>) {
     const file = change_event.target.files?.[0];
@@ -128,7 +142,12 @@ export function CourseImport({ user_id, password }: LoginSession) {
                 className="field mt-1"
                 disabled={importing}
                 onChange={(change_event) => {
-                  set_first_week_monday(change_event.target.value);
+                  const next_first_week_monday = change_event.target.value;
+                  set_first_week_monday(next_first_week_monday);
+                  write_cache(
+                    firstWeekMondayCacheKey(user_id),
+                    next_first_week_monday,
+                  );
                   set_success("");
                 }}
                 type="date"
